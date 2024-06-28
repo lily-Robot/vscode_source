@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as dom from 'vs/base/browser/dom';
-import { Disposable } from 'vs/base/common/lifecycle';
+import { DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
 import { URI } from 'vs/base/common/uri';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ILifecycleService, LifecyclePhase } from 'vs/workbench/services/lifecycle/common/lifecycle';
@@ -14,31 +14,34 @@ export interface WebviewIcons {
 	readonly dark: URI;
 }
 
-export class WebviewIconManager extends Disposable {
+export class WebviewIconManager implements IDisposable {
 
 	private readonly _icons = new Map<string, WebviewIcons>();
 
 	private _styleElement: HTMLStyleElement | undefined;
+	private _styleElementDisposable: DisposableStore | undefined;
 
 	constructor(
 		@ILifecycleService private readonly _lifecycleService: ILifecycleService,
 		@IConfigurationService private readonly _configService: IConfigurationService,
 	) {
-		super();
-		this._register(this._configService.onDidChangeConfiguration(e => {
+		this._configService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration('workbench.iconTheme')) {
 				this.updateStyleSheet();
 			}
-		}));
+		});
 	}
-	override dispose() {
-		super.dispose();
+
+	dispose() {
+		this._styleElementDisposable?.dispose();
+		this._styleElementDisposable = undefined;
 		this._styleElement = undefined;
 	}
 
 	private get styleElement(): HTMLStyleElement {
 		if (!this._styleElement) {
-			this._styleElement = dom.createStyleSheet(undefined, undefined, this._store);
+			this._styleElementDisposable = new DisposableStore();
+			this._styleElement = dom.createStyleSheet(undefined, undefined, this._styleElementDisposable);
 			this._styleElement.className = 'webview-icons';
 		}
 		return this._styleElement;

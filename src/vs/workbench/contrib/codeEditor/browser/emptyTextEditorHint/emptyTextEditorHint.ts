@@ -29,15 +29,32 @@ import { KeybindingLabel } from 'vs/base/browser/ui/keybindingLabel/keybindingLa
 import { OS } from 'vs/base/common/platform';
 import { status } from 'vs/base/browser/ui/aria/aria';
 import { AccessibilityVerbositySettingId } from 'vs/workbench/contrib/accessibility/browser/accessibilityConfiguration';
+import { Registry } from 'vs/platform/registry/common/platform';
+import { Extensions, IConfigurationMigrationRegistry } from 'vs/workbench/common/configuration';
 import { LOG_MODE_ID, OUTPUT_MODE_ID } from 'vs/workbench/services/output/common/output';
 import { SEARCH_RESULT_LANGUAGE_ID } from 'vs/workbench/services/search/common/search';
 import { getDefaultHoverDelegate } from 'vs/base/browser/ui/hover/hoverDelegateFactory';
 import { IHoverService } from 'vs/platform/hover/browser/hover';
 import { ChatAgentLocation, IChatAgent, IChatAgentService } from 'vs/workbench/contrib/chat/common/chatAgents';
-import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
 
 const $ = dom.$;
+
+// TODO@joyceerhl remove this after a few iterations
+Registry.as<IConfigurationMigrationRegistry>(Extensions.ConfigurationMigration)
+	.registerConfigurationMigrations([{
+		key: 'workbench.editor.untitled.hint',
+		migrateFn: (value, _accessor) => ([
+			[emptyTextEditorHintSetting, { value }],
+			['workbench.editor.untitled.hint', { value: undefined }]
+		])
+	},
+	{
+		key: 'accessibility.verbosity.untitledHint',
+		migrateFn: (value, _accessor) => ([
+			[AccessibilityVerbositySettingId.EmptyEditorHint, { value }],
+			['accessibility.verbosity.untitledHint', { value: undefined }]
+		])
+	}]);
 
 export interface IEmptyTextEditorHintOptions {
 	readonly clickable?: boolean;
@@ -62,7 +79,6 @@ export class EmptyTextEditorHintContribution implements IEditorContribution {
 		@IChatAgentService private readonly chatAgentService: IChatAgentService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IProductService protected readonly productService: IProductService,
-		@IContextMenuService private readonly contextMenuService: IContextMenuService
 	) {
 		this.toDispose = [];
 		this.toDispose.push(this.editor.onDidChangeModel(() => this.update()));
@@ -131,7 +147,7 @@ export class EmptyTextEditorHintContribution implements IEditorContribution {
 		}
 
 		const hasEditorAgents = Boolean(this.chatAgentService.getDefaultAgent(ChatAgentLocation.Editor));
-		const shouldRenderDefaultHint = model?.uri.scheme === Schemas.untitled && languageId === PLAINTEXT_LANGUAGE_ID;
+		const shouldRenderDefaultHint = model?.uri.scheme === Schemas.untitled && languageId === PLAINTEXT_LANGUAGE_ID && hasEditorAgents;
 		return hasEditorAgents || shouldRenderDefaultHint;
 	}
 
@@ -148,8 +164,7 @@ export class EmptyTextEditorHintContribution implements IEditorContribution {
 				this.keybindingService,
 				this.chatAgentService,
 				this.telemetryService,
-				this.productService,
-				this.contextMenuService
+				this.productService
 			);
 		} else if (!shouldRenderHint && this.textHintContentWidget) {
 			this.textHintContentWidget.dispose();
@@ -182,8 +197,7 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 		private readonly keybindingService: IKeybindingService,
 		private readonly chatAgentService: IChatAgentService,
 		private readonly telemetryService: ITelemetryService,
-		private readonly productService: IProductService,
-		private readonly contextMenuService: IContextMenuService,
+		private readonly productService: IProductService
 	) {
 		this.toDispose = new DisposableStore();
 		this.toDispose.add(this.editor.onDidChangeConfiguration((e: ConfigurationChangedEvent) => {
@@ -202,36 +216,6 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 
 	getId(): string {
 		return EmptyTextEditorHintContentWidget.ID;
-	}
-
-	private _disableHint(e?: MouseEvent) {
-		const disableHint = () => {
-			this.configurationService.updateValue(emptyTextEditorHintSetting, 'hidden');
-			this.dispose();
-			this.editor.focus();
-		};
-
-		if (!e) {
-			disableHint();
-			return;
-		}
-
-		this.contextMenuService.showContextMenu({
-			getAnchor: () => { return new StandardMouseEvent(dom.getActiveWindow(), e); },
-			getActions: () => {
-				return [{
-					id: 'workench.action.disableEmptyEditorHint',
-					label: localize('disableEditorEmptyHint', "Disable Empty Editor Hint"),
-					tooltip: localize('disableEditorEmptyHint', "Disable Empty Editor Hint"),
-					enabled: true,
-					class: undefined,
-					run: () => {
-						disableHint();
-					}
-				}
-				];
-			}
-		});
 	}
 
 	private _getHintInlineChat(providers: IChatAgent[]) {
@@ -273,7 +257,6 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 					const hintPart = $('a', undefined, fragment);
 					hintPart.style.fontStyle = 'italic';
 					hintPart.style.cursor = 'pointer';
-					this.toDispose.add(dom.addDisposableListener(hintPart, dom.EventType.CONTEXT_MENU, (e) => this._disableHint(e)));
 					this.toDispose.add(dom.addDisposableListener(hintPart, dom.EventType.CLICK, handleClick));
 					return hintPart;
 				} else {
@@ -292,7 +275,6 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 
 			if (this.options.clickable) {
 				label.element.style.cursor = 'pointer';
-				this.toDispose.add(dom.addDisposableListener(label.element, dom.EventType.CONTEXT_MENU, (e) => this._disableHint(e)));
 				this.toDispose.add(dom.addDisposableListener(label.element, dom.EventType.CLICK, handleClick));
 			}
 
@@ -315,7 +297,7 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 			hintElement.appendChild(rendered);
 		}
 
-		return { ariaLabel, hintElement };
+		return { ariaLabel, hintHandler, hintElement };
 	}
 
 	private _getHintDefault() {
@@ -333,7 +315,7 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 						chooseEditorOnClickOrTap(event.browserEvent);
 						break;
 					case '3':
-						this._disableHint();
+						dontShowOnClickOrTap();
 						break;
 				}
 			}
@@ -378,6 +360,12 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 			}
 		};
 
+		const dontShowOnClickOrTap = () => {
+			this.configurationService.updateValue(emptyTextEditorHintSetting, 'hidden');
+			this.dispose();
+			this.editor.focus();
+		};
+
 		const hintMsg = localize({
 			key: 'message',
 			comment: [
@@ -399,7 +387,7 @@ class EmptyTextEditorHintContentWidget implements IContentWidget {
 			anchor.style.cursor = 'pointer';
 			const id = keybindingsLookup.shift();
 			const title = id && this.keybindingService.lookupKeybinding(id)?.getLabel();
-			hintHandler.disposables.add(this.hoverService.setupManagedHover(getDefaultHoverDelegate('mouse'), anchor, title ?? ''));
+			hintHandler.disposables.add(this.hoverService.setupUpdatableHover(getDefaultHoverDelegate('mouse'), anchor, title ?? ''));
 		}
 
 		return { hintElement, ariaLabel };

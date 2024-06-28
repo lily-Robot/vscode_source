@@ -7,9 +7,9 @@
 'use strict';
 
 /**
- * @import { IProductConfiguration } from './vs/base/common/product'
- * @import { NLSConfiguration } from './vs/base/node/languagePacks'
- * @import { NativeParsedArgs } from './vs/platform/environment/common/argv'
+ * @typedef {import('./vs/base/common/product').IProductConfiguration} IProductConfiguration
+ * @typedef {import('./vs/base/node/languagePacks').NLSConfiguration} NLSConfiguration
+ * @typedef {import('./vs/platform/environment/common/argv').NativeParsedArgs} NativeParsedArgs
  */
 
 const perf = require('./vs/base/common/performance');
@@ -21,7 +21,7 @@ const os = require('os');
 const bootstrap = require('./bootstrap');
 const bootstrapNode = require('./bootstrap-node');
 const { getUserDataPath } = require('./vs/platform/environment/node/userDataPath');
-const { parse } = require('./vs/base/common/jsonc');
+const { stripComments } = require('./vs/base/common/stripComments');
 const { getUNCHost, addUNCHostToAllowlist } = require('./vs/base/node/unc');
 /** @type {Partial<IProductConfiguration>} */
 // @ts-ignore
@@ -205,10 +205,7 @@ function configureCommandlineSwitchesSync(cliArgs) {
 		'force-color-profile',
 
 		// disable LCD font rendering, a Chromium flag
-		'disable-lcd-text',
-
-		// bypass any specified proxy for the given semi-colon-separated list of hosts
-		'proxy-bypass-list'
+		'disable-lcd-text'
 	];
 
 	if (process.platform === 'linux') {
@@ -246,7 +243,10 @@ function configureCommandlineSwitchesSync(cliArgs) {
 					app.commandLine.appendSwitch(argvKey);
 				}
 			} else if (argvValue) {
-				if (argvKey === 'password-store') {
+				if (argvKey === 'force-color-profile') {
+					// Color profile
+					app.commandLine.appendSwitch(argvKey, argvValue);
+				} else if (argvKey === 'password-store') {
 					// Password store
 					// TODO@TylerLeonhardt: Remove this migration in 3 months
 					let migratedArgvValue = argvValue;
@@ -254,8 +254,6 @@ function configureCommandlineSwitchesSync(cliArgs) {
 						migratedArgvValue = 'gnome-libsecret';
 					}
 					app.commandLine.appendSwitch(argvKey, migratedArgvValue);
-				} else {
-					app.commandLine.appendSwitch(argvKey, argvValue);
 				}
 			}
 		}
@@ -318,7 +316,7 @@ function readArgvConfigSync() {
 	const argvConfigPath = getArgvConfigPath();
 	let argvConfig;
 	try {
-		argvConfig = parse(fs.readFileSync(argvConfigPath).toString());
+		argvConfig = JSON.parse(stripComments(fs.readFileSync(argvConfigPath).toString()));
 	} catch (error) {
 		if (error && error.code === 'ENOENT') {
 			createDefaultArgvConfigSync(argvConfigPath);

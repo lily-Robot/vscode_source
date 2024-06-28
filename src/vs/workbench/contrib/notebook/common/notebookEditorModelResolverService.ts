@@ -5,9 +5,10 @@
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { URI } from 'vs/base/common/uri';
-import { IResolvedNotebookEditorModel, NotebookEditorModelCreationOptions } from 'vs/workbench/contrib/notebook/common/notebookCommon';
+import { IResolvedNotebookEditorModel } from 'vs/workbench/contrib/notebook/common/notebookCommon';
 import { IReference } from 'vs/base/common/lifecycle';
 import { Event, IWaitUntil } from 'vs/base/common/event';
+import { IFileReadLimits } from 'vs/platform/files/common/files';
 
 export const INotebookEditorModelResolverService = createDecorator<INotebookEditorModelResolverService>('INotebookModelResolverService');
 
@@ -49,6 +50,6 @@ export interface INotebookEditorModelResolverService {
 
 	isDirty(resource: URI): boolean;
 
-	resolve(resource: URI, viewType?: string, creationOptions?: NotebookEditorModelCreationOptions): Promise<IReference<IResolvedNotebookEditorModel>>;
-	resolve(resource: IUntitledNotebookResource, viewType: string, creationOtions?: NotebookEditorModelCreationOptions): Promise<IReference<IResolvedNotebookEditorModel>>;
+	resolve(resource: URI, viewType?: string, limits?: IFileReadLimits): Promise<IReference<IResolvedNotebookEditorModel>>;
+	resolve(resource: IUntitledNotebookResource, viewType: string, limits?: IFileReadLimits): Promise<IReference<IResolvedNotebookEditorModel>>;
 }

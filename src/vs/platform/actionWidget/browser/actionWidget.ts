@@ -21,7 +21,7 @@ import { inputActiveOptionBackground, registerColor } from 'vs/platform/theme/co
 
 registerColor(
 	'actionBar.toggledBackground',
-	inputActiveOptionBackground,
+	{ dark: inputActiveOptionBackground, light: inputActiveOptionBackground, hcDark: inputActiveOptionBackground, hcLight: inputActiveOptionBackground, },
 	localize('actionBar.toggledBackground', 'Background color for toggled action items in action bar.')
 );
 

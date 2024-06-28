@@ -9,7 +9,7 @@ import { HoverPosition } from 'vs/base/browser/ui/hover/hoverWidget';
 import { SimpleIconLabel } from 'vs/base/browser/ui/iconLabel/simpleIconLabel';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { Emitter } from 'vs/base/common/event';
-import { IMarkdownString, MarkdownString } from 'vs/base/common/htmlContent';
+import { IMarkdownString } from 'vs/base/common/htmlContent';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { IDisposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { ILanguageService } from 'vs/editor/common/languages/language';
@@ -448,27 +448,15 @@ export class SettingsTreeIndicatorsLabel implements IDisposable {
 
 	updateDefaultOverrideIndicator(element: SettingsTreeSettingElement) {
 		this.defaultOverrideIndicator.element.style.display = 'none';
-		let sourceToDisplay = getDefaultValueSourceToDisplay(element);
+		const sourceToDisplay = getDefaultValueSourceToDisplay(element);
 		if (sourceToDisplay !== undefined) {
 			this.defaultOverrideIndicator.element.style.display = 'inline';
 			this.defaultOverrideIndicator.disposables.clear();
 
-			// Show source of default value when hovered
-			if (Array.isArray(sourceToDisplay) && sourceToDisplay.length === 1) {
-				sourceToDisplay = sourceToDisplay[0];
-			}
-
-			let defaultOverrideHoverContent;
-			if (!Array.isArray(sourceToDisplay)) {
-				defaultOverrideHoverContent = localize('defaultOverriddenDetails', "Default setting value overridden by `{0}`", sourceToDisplay);
-			} else {
-				sourceToDisplay = sourceToDisplay.map(source => `\`${source}\``);
-				defaultOverrideHoverContent = localize('multipledefaultOverriddenDetails', "A default values has been set by {0}", sourceToDisplay.slice(0, -1).join(', ') + ' & ' + sourceToDisplay.slice(-1));
-			}
-
+			const defaultOverrideHoverContent = localize('defaultOverriddenDetails', "Default setting value overridden by {0}", sourceToDisplay);
 			const showHover = (focus: boolean) => {
 				return this.hoverService.showHover({
-					content: new MarkdownString().appendMarkdown(defaultOverrideHoverContent),
+					content: defaultOverrideHoverContent,
 					target: this.defaultOverrideIndicator.element,
 					position: {
 						hoverPosition: HoverPosition.BELOW,
@@ -485,22 +473,14 @@ export class SettingsTreeIndicatorsLabel implements IDisposable {
 	}
 }
 
-function getDefaultValueSourceToDisplay(element: SettingsTreeSettingElement): string | undefined | string[] {
-	let sourceToDisplay: string | undefined | string[];
+function getDefaultValueSourceToDisplay(element: SettingsTreeSettingElement): string | undefined {
+	let sourceToDisplay: string | undefined;
 	const defaultValueSource = element.defaultValueSource;
 	if (defaultValueSource) {
-		if (defaultValueSource instanceof Map) {
-			sourceToDisplay = [];
-			for (const [, value] of defaultValueSource) {
-				const newValue = typeof value !== 'string' ? value.displayName ?? value.id : value;
-				if (!sourceToDisplay.includes(newValue)) {
-					sourceToDisplay.push(newValue);
-				}
-			}
+		if (typeof defaultValueSource !== 'string') {
+			sourceToDisplay = defaultValueSource.displayName ?? defaultValueSource.id;
 		} else if (typeof defaultValueSource === 'string') {
 			sourceToDisplay = defaultValueSource;
-		} else {
-			sourceToDisplay = defaultValueSource.displayName ?? defaultValueSource.id;
 		}
 	}
 	return sourceToDisplay;
@@ -558,19 +538,9 @@ export function getIndicatorsLabelAriaLabel(element: SettingsTreeSettingElement,
 	}
 
 	// Add default override indicator text
-	let sourceToDisplay = getDefaultValueSourceToDisplay(element);
+	const sourceToDisplay = getDefaultValueSourceToDisplay(element);
 	if (sourceToDisplay !== undefined) {
-		if (Array.isArray(sourceToDisplay) && sourceToDisplay.length === 1) {
-			sourceToDisplay = sourceToDisplay[0];
-		}
-
-		let overriddenDetailsText;
-		if (!Array.isArray(sourceToDisplay)) {
-			overriddenDetailsText = localize('defaultOverriddenDetailsAriaLabel', "{0} overrides the default value", sourceToDisplay);
-		} else {
-			overriddenDetailsText = localize('multipleDefaultOverriddenDetailsAriaLabel', "{0} override the default value", sourceToDisplay.slice(0, -1).join(', ') + ' & ' + sourceToDisplay.slice(-1));
-		}
-		ariaLabelSections.push(overriddenDetailsText);
+		ariaLabelSections.push(localize('defaultOverriddenDetailsAriaLabel', "{0} overrides the default value", sourceToDisplay));
 	}
 
 	// Add text about default values being overridden in other languages

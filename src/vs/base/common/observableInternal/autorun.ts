@@ -76,7 +76,7 @@ export function autorunWithStoreHandleChanges<TChangeSummary>(
 		{
 			owner: options.owner,
 			debugName: options.debugName,
-			debugReferenceFn: options.debugReferenceFn ?? fn,
+			debugReferenceFn: options.debugReferenceFn,
 			createEmptyChangeSummary: options.createEmptyChangeSummary,
 			handleChange: options.handleChange,
 		},
@@ -154,7 +154,7 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 	}
 
 	constructor(
-		public readonly _debugNameData: DebugNameData,
+		private readonly _debugNameData: DebugNameData,
 		public readonly _runFn: (reader: IReader, changeSummary: TChangeSummary) => void,
 		private readonly createChangeSummary: (() => TChangeSummary) | undefined,
 		private readonly _handleChange: ((context: IChangeContext, summary: TChangeSummary) => boolean) | undefined,

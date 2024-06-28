@@ -150,7 +150,7 @@ export class MainThreadTesting extends Disposable implements MainThreadTestingSh
 				let value = task.coverage.read(undefined);
 				if (!value) {
 					value = new TestCoverage(run, taskId, this.uriIdentityService, {
-						getCoverageDetails: (id, testId, token) => this.proxy.$getCoverageDetails(id, testId, token)
+						getCoverageDetails: (id, token) => this.proxy.$getCoverageDetails(id, token)
 							.then(r => r.map(CoverageDetails.deserialize)),
 					});
 					value.append(deserialized, tx);

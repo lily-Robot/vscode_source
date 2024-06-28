@@ -6,7 +6,7 @@
 import { addDisposableListener, isKeyboardEvent } from 'vs/base/browser/dom';
 import { DomEmitter } from 'vs/base/browser/event';
 import { IKeyboardEvent, StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
-import { IMouseEvent } from 'vs/base/browser/mouseEvent';
+import { distinct } from 'vs/base/common/arrays';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { CancellationToken, CancellationTokenSource } from 'vs/base/common/cancellation';
 import { memoize } from 'vs/base/common/decorators';
@@ -66,7 +66,12 @@ export const debugInlineForeground = registerColor('editor.inlineValuesForegroun
 	hcLight: '#00000080'
 }, nls.localize('editor.inlineValuesForeground', "Color for the debug inline value text."));
 
-export const debugInlineBackground = registerColor('editor.inlineValuesBackground', '#ffc80033', nls.localize('editor.inlineValuesBackground', "Color for the debug inline value background."));
+export const debugInlineBackground = registerColor('editor.inlineValuesBackground', {
+	dark: '#ffc80033',
+	light: '#ffc80033',
+	hcDark: '#ffc80033',
+	hcLight: '#ffc80033'
+}, nls.localize('editor.inlineValuesBackground', "Color for the debug inline value background."));
 
 class InlineSegment {
 	constructor(public column: number, public text: string) {
@@ -121,7 +126,7 @@ function replaceWsWithNoBreakWs(str: string): string {
 	return str.replace(/[ \t]/g, strings.noBreakWhitespace);
 }
 
-function createInlineValueDecorationsInsideRange(expressions: ReadonlyArray<IExpression>, ranges: Range[], model: ITextModel, wordToLineNumbersMap: Map<string, number[]>) {
+function createInlineValueDecorationsInsideRange(expressions: ReadonlyArray<IExpression>, ranges: Range[], model: ITextModel, wordToLineNumbersMap: Map<string, number[]>): IModelDeltaDecoration[] {
 	const nameValueMap = new Map<string, string>();
 	for (const expr of expressions) {
 		nameValueMap.set(expr.name, expr.value);
@@ -151,14 +156,17 @@ function createInlineValueDecorationsInsideRange(expressions: ReadonlyArray<IExp
 		}
 	});
 
+	const decorations: IModelDeltaDecoration[] = [];
 	// Compute decorators for each line
-	return [...lineToNamesMap].map(([line, names]) => ({
-		line,
-		variables: names.sort((first, second) => {
+	lineToNamesMap.forEach((names, line) => {
+		const contentText = names.sort((first, second) => {
 			const content = model.getLineContent(line);
 			return content.indexOf(first) - content.indexOf(second);
-		}).map(name => ({ name, value: nameValueMap.get(name)! }))
-	}));
+		}).map(name => `${name} = ${nameValueMap.get(name)}`).join(', ');
+		decorations.push(...createInlineValueDecoration(line, contentText));
+	});
+
+	return decorations;
 }
 
 function getWordToLineNumbersMap(model: ITextModel, lineNumber: number, result: Map<string, number[]>) {
@@ -200,7 +208,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 	private toDispose: IDisposable[];
 	private hoverWidget: DebugHoverWidget;
-	private hoverPosition?: { position: Position; event: IMouseEvent };
+	private hoverPosition: Position | null = null;
 	private mouseDown = false;
 	private exceptionWidgetVisible: IContextKey<boolean>;
 	private gutterIsHovered = false;
@@ -333,7 +341,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 				if (debugHoverWasVisible && this.hoverPosition) {
 					// If the debug hover was visible immediately show the editor hover for the alt transition to be smooth
-					this.showEditorHover(this.hoverPosition.position, false);
+					this.showEditorHover(this.hoverPosition, false);
 				}
 
 				const onKeyUp = new DomEmitter(ownerDocument, 'keyup');
@@ -353,14 +361,14 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		});
 	}
 
-	async showHover(position: Position, focus: boolean, mouseEvent?: IMouseEvent): Promise<void> {
+	async showHover(position: Position, focus: boolean): Promise<void> {
 		// normally will already be set in `showHoverScheduler`, but public callers may hit this directly:
 		this.preventDefaultEditorHover();
 
 		const sf = this.debugService.getViewModel().focusedStackFrame;
 		const model = this.editor.getModel();
 		if (sf && model && this.uriIdentityService.extUri.isEqual(sf.source.uri, model.uri)) {
-			const result = await this.hoverWidget.showAt(position, focus, mouseEvent);
+			const result = await this.hoverWidget.showAt(position, focus);
 			if (result === ShowDebugHoverResult.NOT_AVAILABLE) {
 				// When no expression available fallback to editor hover
 				this.showEditorHover(position, focus);
@@ -430,7 +438,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private get showHoverScheduler() {
 		const scheduler = new RunOnceScheduler(() => {
 			if (this.hoverPosition && !this.altPressed) {
-				this.showHover(this.hoverPosition.position, false, this.hoverPosition.event);
+				this.showHover(this.hoverPosition, false);
 			}
 		}, this.hoverDelay);
 		this.toDispose.push(scheduler);
@@ -485,8 +493,8 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		}
 
 		if (target.type === MouseTargetType.CONTENT_TEXT) {
-			if (target.position && !Position.equals(target.position, this.hoverPosition?.position || null) && !this.hoverWidget.isInSafeTriangle(mouseEvent.event.posx, mouseEvent.event.posy)) {
-				this.hoverPosition = { position: target.position, event: mouseEvent.event };
+			if (target.position && !Position.equals(target.position, this.hoverPosition)) {
+				this.hoverPosition = target.position;
 				// Disable the editor hover during the request to avoid flickering
 				this.preventDefaultEditorHover();
 				this.showHoverScheduler.schedule(this.hoverDelay);
@@ -774,15 +782,10 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			// old "one-size-fits-all" strategy
 
 			const scopes = await stackFrame.getMostSpecificScopes(stackFrame.range);
-			const scopesWithVariables = await Promise.all(scopes.map(async scope =>
-				({ scope, variables: await scope.getChildren() })));
+			// Get all top level variables in the scope chain
+			const decorationsPerScope = await Promise.all(scopes.map(async scope => {
+				const variables = await scope.getChildren();
 
-			// Map of inline values per line that's populated in scope order, from
-			// narrowest to widest. This is done to avoid duplicating values if
-			// they appear in multiple scopes or are shadowed (#129770, #217326)
-			const valuesPerLine = new Map</* line */number, Map</* var */string, /* value */ string>>();
-
-			for (const { scope, variables } of scopesWithVariables) {
 				let scopeRange = new Range(0, 0, stackFrame.range.startLineNumber, stackFrame.range.startColumn);
 				if (scope.range) {
 					scopeRange = scopeRange.setStartPosition(scope.range.startLineNumber, scope.range.startColumn);
@@ -794,25 +797,12 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 					this._wordToLineNumbersMap.ensureRangePopulated(range);
 				}
 
-				const mapped = createInlineValueDecorationsInsideRange(variables, ownRanges, model, this._wordToLineNumbersMap.value);
-				for (const { line, variables } of mapped) {
-					let values = valuesPerLine.get(line);
-					if (!values) {
-						values = new Map<string, string>();
-						valuesPerLine.set(line, values);
-					}
+				return createInlineValueDecorationsInsideRange(variables, ownRanges, model, this._wordToLineNumbersMap.value);
+			}));
 
-					for (const { name, value } of variables) {
-						if (!values.has(name)) {
-							values.set(name, value);
-						}
-					}
-				}
-			}
-
-			allDecorations = [...valuesPerLine.entries()].flatMap(([line, values]) =>
-				createInlineValueDecoration(line, [...values].map(([n, v]) => `${n} = ${v}`).join(', '))
-			);
+			allDecorations = distinct(decorationsPerScope.flat(),
+				// Deduplicate decorations since same variable can appear in multiple scopes, leading to duplicated decorations #129770
+				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
 		}
 
 		if (cts.token.isCancellationRequested) {

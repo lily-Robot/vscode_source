@@ -119,7 +119,6 @@ export class Terminal {
 			// Reset
 			await this.code.dispatchKeybinding('Backspace');
 		}
-		await this.code.wait(100);
 		await this.code.dispatchKeybinding(altKey ? 'Alt+Enter' : 'enter');
 		await this.quickinput.waitForQuickInputClosed();
 		if (commandId === TerminalCommandIdWithValue.NewWithProfile) {

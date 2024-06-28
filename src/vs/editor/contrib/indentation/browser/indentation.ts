@@ -418,10 +418,6 @@ export class AutoIndentOnPaste implements IEditorContribution {
 		if (!model) {
 			return;
 		}
-		const containsOnlyWhitespace = this.rangeContainsOnlyWhitespaceCharacters(model, range);
-		if (containsOnlyWhitespace) {
-			return;
-		}
 		if (isStartOrEndInString(model, range)) {
 			return;
 		}
@@ -470,7 +466,7 @@ export class AutoIndentOnPaste implements IEditorContribution {
 						range: new Range(startLineNumber, 1, startLineNumber, oldIndentation.length + 1),
 						text: newIndent
 					});
-					firstLineText = newIndent + firstLineText.substring(oldIndentation.length);
+					firstLineText = newIndent + firstLineText.substr(oldIndentation.length);
 				} else {
 					const indentMetadata = getIndentMetadata(model, startLineNumber, this._languageConfigurationService);
 
@@ -548,35 +544,6 @@ export class AutoIndentOnPaste implements IEditorContribution {
 			this.editor.executeCommand('autoIndentOnPaste', cmd);
 			this.editor.pushUndoStop();
 		}
-	}
-
-	private rangeContainsOnlyWhitespaceCharacters(model: ITextModel, range: Range): boolean {
-		const lineContainsOnlyWhitespace = (content: string): boolean => {
-			return content.trim().length === 0;
-		};
-		let containsOnlyWhitespace: boolean = true;
-		if (range.startLineNumber === range.endLineNumber) {
-			const lineContent = model.getLineContent(range.startLineNumber);
-			const linePart = lineContent.substring(range.startColumn - 1, range.endColumn - 1);
-			containsOnlyWhitespace = lineContainsOnlyWhitespace(linePart);
-		} else {
-			for (let i = range.startLineNumber; i <= range.endLineNumber; i++) {
-				const lineContent = model.getLineContent(i);
-				if (i === range.startLineNumber) {
-					const linePart = lineContent.substring(range.startColumn - 1);
-					containsOnlyWhitespace = lineContainsOnlyWhitespace(linePart);
-				} else if (i === range.endLineNumber) {
-					const linePart = lineContent.substring(0, range.endColumn - 1);
-					containsOnlyWhitespace = lineContainsOnlyWhitespace(linePart);
-				} else {
-					containsOnlyWhitespace = model.getLineFirstNonWhitespaceColumn(i) === 0;
-				}
-				if (!containsOnlyWhitespace) {
-					break;
-				}
-			}
-		}
-		return containsOnlyWhitespace;
 	}
 
 	private shouldIgnoreLine(model: ITextModel, lineNumber: number): boolean {

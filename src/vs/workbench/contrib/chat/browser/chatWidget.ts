@@ -69,8 +69,6 @@ export interface IChatWidgetContrib extends IDisposable {
 	 */
 	getInputState?(): any;
 
-	onDidChangeInputState?: Event<void>;
-
 	/**
 	 * Called with the result of getInputState when navigating input history.
 	 */
@@ -107,16 +105,13 @@ export class ChatWidget extends Disposable implements IChatWidget {
 	private _onDidChangeParsedInput = this._register(new Emitter<void>());
 	readonly onDidChangeParsedInput = this._onDidChangeParsedInput.event;
 
-	private readonly _onWillMaybeChangeHeight = new Emitter<void>();
-	readonly onWillMaybeChangeHeight: Event<void> = this._onWillMaybeChangeHeight.event;
-
 	private _onDidChangeHeight = this._register(new Emitter<number>());
 	readonly onDidChangeHeight = this._onDidChangeHeight.event;
 
 	private readonly _onDidChangeContentHeight = new Emitter<void>();
 	readonly onDidChangeContentHeight: Event<void> = this._onDidChangeContentHeight.event;
 
-	private contribs: ReadonlyArray<IChatWidgetContrib> = [];
+	private contribs: IChatWidgetContrib[] = [];
 
 	private tree!: WorkbenchObjectTree<ChatTreeItem>;
 	private renderer!: ChatListItemRenderer;
@@ -316,15 +311,6 @@ export class ChatWidget extends Disposable implements IChatWidget {
 				return undefined;
 			}
 		}).filter(isDefined);
-
-		this.contribs.forEach(c => {
-			if (c.onDidChangeInputState) {
-				this._register(c.onDidChangeInputState(() => {
-					const state = this.collectInputState();
-					this.inputPart.updateState(state);
-				}));
-			}
-		});
 	}
 
 	getContrib<T extends IChatWidgetContrib>(id: string): T | undefined {
@@ -376,8 +362,6 @@ export class ChatWidget extends Disposable implements IChatWidget {
 						collapsible: false
 					};
 				});
-
-			this._onWillMaybeChangeHeight.fire();
 
 			this.tree.setChildren(null, treeItems, {
 				diffIdentityProvider: {
@@ -554,12 +538,12 @@ export class ChatWidget extends Disposable implements IChatWidget {
 		this._onDidChangeContentHeight.fire();
 	}
 
-	private createInput(container: HTMLElement, options?: { renderFollowups: boolean; renderStyle?: 'default' | 'compact' | 'minimal' }): void {
+	private createInput(container: HTMLElement, options?: { renderFollowups: boolean; renderStyle?: 'default' | 'compact' }): void {
 		this.inputPart = this._register(this.instantiationService.createInstance(ChatInputPart,
 			this.location,
 			{
 				renderFollowups: options?.renderFollowups ?? true,
-				renderStyle: options?.renderStyle === 'minimal' ? 'compact' : options?.renderStyle,
+				renderStyle: options?.renderStyle,
 				menus: { executeToolbar: MenuId.ChatExecute, ...this.viewOptions.menus },
 				editorOverflowWidgetsDomNode: this.viewOptions.editorOverflowWidgetsDomNode,
 			}
@@ -568,9 +552,8 @@ export class ChatWidget extends Disposable implements IChatWidget {
 
 		this._register(this.inputPart.onDidLoadInputState(state => {
 			this.contribs.forEach(c => {
-				if (c.setInputState) {
-					const contribState = (typeof state === 'object' && state?.[c.id]) ?? {};
-					c.setInputState(contribState);
+				if (c.setInputState && typeof state === 'object' && state?.[c.id]) {
+					c.setInputState(state[c.id]);
 				}
 			});
 		}));
@@ -663,7 +646,7 @@ export class ChatWidget extends Disposable implements IChatWidget {
 			this.viewModel = undefined;
 			this.onDidChangeItems();
 		}));
-		this.inputPart.initForNewChatModel(viewState.inputValue, viewState.inputState ?? this.collectInputState());
+		this.inputPart.setState(viewState.inputValue);
 		this.contribs.forEach(c => {
 			if (c.setInputState && viewState.inputState?.[c.id]) {
 				c.setInputState(viewState.inputState?.[c.id]);
@@ -709,15 +692,11 @@ export class ChatWidget extends Disposable implements IChatWidget {
 	}
 
 	setInput(value = ''): void {
-		this.inputPart.setValue(value, false);
+		this.inputPart.setValue(value);
 	}
 
 	getInput(): string {
 		return this.inputPart.inputEditor.getValue();
-	}
-
-	logInputHistory(): void {
-		this.inputPart.logInputHistory();
 	}
 
 	async acceptInput(query?: string): Promise<IChatResponseModel | undefined> {
@@ -752,9 +731,9 @@ export class ChatWidget extends Disposable implements IChatWidget {
 
 			if (result) {
 				this.inputPart.attachedContext.clear();
-				this.inputPart.acceptInput(isUserQuery);
+				const inputState = this.collectInputState();
+				this.inputPart.acceptInput(isUserQuery ? input : undefined, isUserQuery ? inputState : undefined);
 				this._onDidSubmitAgent.fire({ agent: result.agent, slashCommand: result.slashCommand });
-				this.inputPart.updateState(this.collectInputState());
 				result.responseCompletePromise.then(() => {
 					const responses = this.viewModel?.getItems().filter(isResponseVM);
 					const lastResponse = responses?.[responses.length - 1];

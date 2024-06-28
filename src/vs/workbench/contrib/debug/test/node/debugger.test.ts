@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
+import * as assert from 'assert';
 import { join, normalize } from 'vs/base/common/path';
 import * as platform from 'vs/base/common/platform';
 import { IDebugAdapterExecutable, IConfig, IDebugSession, IAdapterManager } from 'vs/workbench/contrib/debug/common/debug';
@@ -64,8 +64,7 @@ suite('Debug - Debugger', () => {
 			'debuggers': [
 				debuggerContribution
 			]
-		},
-		enabledApiProposals: undefined,
+		}
 	};
 
 	const extensionDescriptor1 = {
@@ -90,8 +89,7 @@ suite('Debug - Debugger', () => {
 					args: ['parg']
 				}
 			]
-		},
-		enabledApiProposals: undefined,
+		}
 	};
 
 	const extensionDescriptor2 = {
@@ -124,8 +122,7 @@ suite('Debug - Debugger', () => {
 					}
 				}
 			]
-		},
-		enabledApiProposals: undefined,
+		}
 	};
 
 

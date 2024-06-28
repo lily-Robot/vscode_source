@@ -8,7 +8,7 @@ export interface IDebugNameData {
 	 * The owner object of an observable.
 	 * Used for debugging only, such as computing a name for the observable by iterating over the fields of the owner.
 	 */
-	readonly owner?: DebugOwner | undefined;
+	readonly owner?: Owner | undefined;
 
 	/**
 	 * A string or function that returns a string that represents the name of the observable.
@@ -25,7 +25,7 @@ export interface IDebugNameData {
 
 export class DebugNameData {
 	constructor(
-		public readonly owner: DebugOwner | undefined,
+		public readonly owner: Owner | undefined,
 		public readonly debugNameSource: DebugNameSource | undefined,
 		public readonly referenceFn: Function | undefined,
 	) { }
@@ -36,10 +36,10 @@ export class DebugNameData {
 }
 
 /**
- * The owning object of an observable.
+ * The owner object of an observable.
  * Is only used for debugging purposes, such as computing a name for the observable by iterating over the fields of the owner.
  */
-export type DebugOwner = object | undefined;
+export type Owner = object | undefined;
 export type DebugNameSource = string | (() => string | undefined);
 
 const countPerName = new Map<string, number>();

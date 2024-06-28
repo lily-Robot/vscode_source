@@ -94,7 +94,19 @@ export interface IEditorHoverColorPickerWidget {
 	layout(): void;
 }
 
-export interface IEditorHoverContext {
+export interface IEditorHoverRenderContext {
+	/**
+	 * The fragment where dom elements should be attached.
+	 */
+	readonly fragment: DocumentFragment;
+	/**
+	 * The status bar for actions for this hover.
+	 */
+	readonly statusBar: IEditorHoverStatusBar;
+	/**
+	 * Set if the hover will render a color picker widget.
+	 */
+	setColorPicker(widget: IEditorHoverColorPickerWidget): void;
 	/**
 	 * The contents rendered inside the fragment have been changed, which means that the hover should relayout.
 	 */
@@ -109,58 +121,13 @@ export interface IEditorHoverContext {
 	hide(): void;
 }
 
-export interface IEditorHoverRenderContext extends IEditorHoverContext {
-	/**
-	 * The fragment where dom elements should be attached.
-	 */
-	readonly fragment: DocumentFragment;
-	/**
-	 * The status bar for actions for this hover.
-	 */
-	readonly statusBar: IEditorHoverStatusBar;
-}
-
-export interface IRenderedHoverPart<T extends IHoverPart> extends IDisposable {
-	/**
-	 * The rendered hover part.
-	 */
-	hoverPart: T;
-	/**
-	 * The HTML element containing the hover part.
-	 */
-	hoverElement: HTMLElement;
-}
-
-export interface IRenderedHoverParts<T extends IHoverPart> extends IDisposable {
-	/**
-	 * Array of rendered hover parts.
-	 */
-	renderedHoverParts: IRenderedHoverPart<T>[];
-}
-
-/**
- * Default implementation of IRenderedHoverParts.
- */
-export class RenderedHoverParts<T extends IHoverPart> implements IRenderedHoverParts<T> {
-
-	constructor(public readonly renderedHoverParts: IRenderedHoverPart<T>[]) { }
-
-	dispose() {
-		for (const part of this.renderedHoverParts) {
-			part.dispose();
-		}
-	}
-}
-
 export interface IEditorHoverParticipant<T extends IHoverPart = IHoverPart> {
 	readonly hoverOrdinal: number;
 	suggestHoverAnchor?(mouseEvent: IEditorMouseEvent): HoverAnchor | null;
 	computeSync(anchor: HoverAnchor, lineDecorations: IModelDecoration[]): T[];
 	computeAsync?(anchor: HoverAnchor, lineDecorations: IModelDecoration[], token: CancellationToken): AsyncIterableObject<T>;
 	createLoadingMessage?(anchor: HoverAnchor): T | null;
-	renderHoverParts(context: IEditorHoverRenderContext, hoverParts: T[]): IRenderedHoverParts<T>;
-	getAccessibleContent(hoverPart: T): string;
-	handleResize?(): void;
+	renderHoverParts(context: IEditorHoverRenderContext, hoverParts: T[]): IDisposable;
 }
 
 export type IEditorHoverParticipantCtor = IConstructorSignature<IEditorHoverParticipant, [ICodeEditor]>;

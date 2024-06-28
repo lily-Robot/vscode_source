@@ -248,7 +248,7 @@ class MenuInfo {
 					const menuHide = createMenuHide(this._id, isMenuItem ? item.command : item, this._hiddenStates);
 					if (isMenuItem) {
 						// MenuItemAction
-						const menuKeybinding = createConfigureKeybindingAction(this._commandService, this._keybindingService, item.command.id, item.when);
+						const menuKeybinding = createConfigureKeybindingAction(item.command.id, item.when, this._commandService, this._keybindingService);
 						(activeActions ??= []).push(new MenuItemAction(item.command, item.alt, options, menuHide, menuKeybinding, this._contextKeyService, this._commandService));
 					} else {
 						// SubmenuItemAction
@@ -442,11 +442,10 @@ function createMenuHide(menu: MenuId, command: ICommandAction | ISubmenuItem, st
 	};
 }
 
-export function createConfigureKeybindingAction(commandService: ICommandService, keybindingService: IKeybindingService, commandId: string, when: ContextKeyExpression | undefined = undefined, enabled = true): IAction {
+export function createConfigureKeybindingAction(commandId: string, when: ContextKeyExpression | undefined = undefined, commandService: ICommandService, keybindingService: IKeybindingService): IAction {
 	return toAction({
 		id: `configureKeybinding/${commandId}`,
 		label: localize('configure keybinding', "Configure Keybinding"),
-		enabled,
 		run() {
 			// Only set the when clause when there is no keybinding
 			// It is possible that the action and the keybinding have different when clauses

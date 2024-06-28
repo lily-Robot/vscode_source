@@ -71,7 +71,7 @@ export const ICONS = [
 	Codicon.pulse,
 	Codicon.radioTower,
 	Codicon.smiley,
-	Codicon.zap,
+	Codicon.symbolEvent,
 	Codicon.squirrel,
 	Codicon.symbolColor,
 	Codicon.mail,

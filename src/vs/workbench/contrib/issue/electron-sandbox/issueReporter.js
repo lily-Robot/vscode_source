@@ -7,10 +7,6 @@
 (function () {
 	'use strict';
 
-	/**
-	 * @import { ISandboxConfiguration } from '../../../../base/parts/sandbox/common/sandboxTypes'
-	 */
-
 	const bootstrapWindow = bootstrapWindowLib();
 
 	// Load issue reporter into window
@@ -28,10 +24,12 @@
 	);
 
 	/**
+	 * @typedef {import('../../../../base/parts/sandbox/common/sandboxTypes').ISandboxConfiguration} ISandboxConfiguration
+	 *
 	 * @returns {{
 	 *   load: (
 	 *     modules: string[],
-	 *     resultCallback: (result: any, configuration: ISandboxConfiguration) => unknown,
+	 *     resultCallback: (result, configuration: ISandboxConfiguration) => unknown,
 	 *     options?: {
 	 *       configureDeveloperSettings?: (config: ISandboxConfiguration) => {
 	 * 			forceEnableDeveloperKeybindings?: boolean,

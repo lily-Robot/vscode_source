@@ -30,7 +30,6 @@ import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { IAutoSaveConfiguration, IAutoSaveMode, IFilesConfigurationService } from 'vs/workbench/services/filesConfiguration/common/filesConfigurationService';
 import { IWorkspaceTrustEnablementService, IWorkspaceTrustManagementService, IWorkspaceTrustRequestService, IWorkspaceTrustTransitionParticipant, IWorkspaceTrustUriInfo, WorkspaceTrustRequestOptions, WorkspaceTrustUriResponse } from 'vs/platform/workspace/common/workspaceTrust';
 import { IMarker, IMarkerData, IMarkerService, IResourceMarker, MarkerStatistics } from 'vs/platform/markers/common/markers';
-import { IProgress, IProgressStep } from 'vs/platform/progress/common/progress';
 
 export class TestLoggerService extends AbstractLoggerService {
 	constructor(logsHome?: URI) {
@@ -254,7 +253,7 @@ export class TestWorkingCopyFileService implements IWorkingCopyFileService {
 
 	readonly hasSaveParticipants = false;
 	addSaveParticipant(participant: IStoredFileWorkingCopySaveParticipant): IDisposable { return Disposable.None; }
-	async runSaveParticipants(workingCopy: IWorkingCopy, context: IStoredFileWorkingCopySaveParticipantContext, progress: IProgress<IProgressStep>, token: CancellationToken): Promise<void> { }
+	async runSaveParticipants(workingCopy: IWorkingCopy, context: IStoredFileWorkingCopySaveParticipantContext, token: CancellationToken): Promise<void> { }
 
 	async delete(operations: IDeleteOperation[], token: CancellationToken, undoInfo?: IFileOperationUndoRedoInfo): Promise<void> { }
 

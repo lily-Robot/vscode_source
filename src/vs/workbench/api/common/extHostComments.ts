@@ -215,7 +215,7 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 				} else if (rangesResult) {
 					ranges = {
 						ranges: rangesResult.ranges || [],
-						fileComments: rangesResult.enableFileComments || false
+						fileComments: rangesResult.fileComments || false
 					};
 				} else {
 					ranges = rangesResult ?? undefined;
@@ -424,7 +424,6 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 				this._id,
 				this._uri,
 				extHostTypeConverter.Range.from(this._range),
-				this._comments.map(cmt => convertToDTOComment(this, cmt, this._commentsMap, this.extensionDescription)),
 				extensionDescription.identifier,
 				this._isTemplate,
 				editorId
@@ -436,6 +435,9 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 			this._localDisposables.push(this.onDidUpdateCommentThread(() => {
 				this.eventuallyUpdateCommentThread();
 			}));
+
+			// set up comments after ctor to batch update events.
+			this.comments = _comments;
 
 			this._localDisposables.push({
 				dispose: () => {
@@ -463,7 +465,6 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 				set label(value: string | undefined) { that.label = value; },
 				get state(): vscode.CommentThreadState | { resolved?: vscode.CommentThreadState; applicability?: vscode.CommentThreadApplicability } | undefined { return that.state; },
 				set state(value: vscode.CommentThreadState | { resolved?: vscode.CommentThreadState; applicability?: vscode.CommentThreadApplicability }) { that.state = value; },
-				reveal: (options?: vscode.CommentThreadRevealOptions) => that.reveal(options),
 				dispose: () => {
 					that.dispose();
 				}
@@ -545,11 +546,6 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 			}
 
 			return;
-		}
-
-		async reveal(options?: vscode.CommentThreadRevealOptions): Promise<void> {
-			checkProposedApiEnabled(this.extensionDescription, 'commentReveal');
-			return proxy.$revealCommentThread(this._commentControllerHandle, this.handle, { preserveFocus: false, focusReply: false, ...options });
 		}
 
 		dispose() {

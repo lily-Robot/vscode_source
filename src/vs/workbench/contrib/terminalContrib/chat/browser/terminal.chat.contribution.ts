@@ -18,8 +18,6 @@ registerTerminalContribution(TerminalChatController.ID, TerminalChatController, 
 AccessibleViewRegistry.register(new TerminalInlineChatAccessibleView());
 AccessibleViewRegistry.register(new TerminalChatAccessibilityHelp());
 
-registerWorkbenchContribution2(TerminalChatEnabler.Id, TerminalChatEnabler, WorkbenchPhase.AfterRestored);
-
 // #endregion
 
 // #region Actions
@@ -27,7 +25,5 @@ registerWorkbenchContribution2(TerminalChatEnabler.Id, TerminalChatEnabler, Work
 import 'vs/workbench/contrib/terminalContrib/chat/browser/terminalChatActions';
 import { AccessibleViewRegistry } from 'vs/platform/accessibility/browser/accessibleViewRegistry';
 import { TerminalChatAccessibilityHelp } from 'vs/workbench/contrib/terminalContrib/chat/browser/terminalChatAccessibilityHelp';
-import { registerWorkbenchContribution2, WorkbenchPhase } from 'vs/workbench/common/contributions';
-import { TerminalChatEnabler } from 'vs/workbench/contrib/terminalContrib/chat/browser/terminalChatEnabler';
 
 // #endregion

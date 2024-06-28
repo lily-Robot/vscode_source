@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableMap, MutableDisposable, isDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { Disposable, MutableDisposable, isDisposable } from 'vs/base/common/lifecycle';
 import { IStorage, IStorageDatabase, Storage } from 'vs/base/parts/storage/common/storage';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { AbstractStorageService, IStorageService, IStorageValueChangeEvent, StorageScope, StorageTarget, isProfileUsingDefaultStorage } from 'vs/platform/storage/common/storage';
@@ -63,16 +63,10 @@ export abstract class AbstractUserDataProfileStorageService extends Disposable i
 
 	readonly abstract onDidChange: Event<IProfileStorageChanges>;
 
-	private readonly storageServicesMap: DisposableMap<string, StorageService> | undefined;
-
 	constructor(
-		persistStorages: boolean,
 		@IStorageService protected readonly storageService: IStorageService
 	) {
 		super();
-		if (persistStorages) {
-			this.storageServicesMap = this._register(new DisposableMap<string, StorageService>());
-		}
 	}
 
 	async readStorageData(profile: IUserDataProfile): Promise<Map<string, IStorageValue>> {
@@ -88,30 +82,16 @@ export abstract class AbstractUserDataProfileStorageService extends Disposable i
 			return fn(this.storageService);
 		}
 
-		let storageService = this.storageServicesMap?.get(profile.id);
-		if (!storageService) {
-			storageService = new StorageService(this.createStorageDatabase(profile));
-			this.storageServicesMap?.set(profile.id, storageService);
-
-			try {
-				await storageService.initialize();
-			} catch (error) {
-				if (this.storageServicesMap?.has(profile.id)) {
-					this.storageServicesMap.deleteAndDispose(profile.id);
-				} else {
-					storageService.dispose();
-				}
-				throw error;
-			}
-		}
+		const storageDatabase = await this.createStorageDatabase(profile);
+		const storageService = new StorageService(storageDatabase);
 		try {
+			await storageService.initialize();
 			const result = await fn(storageService);
 			await storageService.flush();
 			return result;
 		} finally {
-			if (!this.storageServicesMap?.has(profile.id)) {
-				storageService.dispose();
-			}
+			storageService.dispose();
+			await this.closeAndDispose(storageDatabase);
 		}
 	}
 
@@ -131,6 +111,16 @@ export abstract class AbstractUserDataProfileStorageService extends Disposable i
 		storageService.storeAll(Array.from(items.entries()).map(([key, value]) => ({ key, value, scope: StorageScope.PROFILE, target })), true);
 	}
 
+	protected async closeAndDispose(storageDatabase: IStorageDatabase): Promise<void> {
+		try {
+			await storageDatabase.close();
+		} finally {
+			if (isDisposable(storageDatabase)) {
+				storageDatabase.dispose();
+			}
+		}
+	}
+
 	protected abstract createStorageDatabase(profile: IUserDataProfile): Promise<IStorageDatabase>;
 }
 
@@ -140,13 +130,12 @@ export class RemoteUserDataProfileStorageService extends AbstractUserDataProfile
 	readonly onDidChange: Event<IProfileStorageChanges>;
 
 	constructor(
-		persistStorages: boolean,
 		private readonly remoteService: IRemoteService,
 		userDataProfilesService: IUserDataProfilesService,
 		storageService: IStorageService,
 		logService: ILogService,
 	) {
-		super(persistStorages, storageService);
+		super(storageService);
 
 		const channel = remoteService.getChannel('profileStorageListener');
 		const disposable = this._register(new MutableDisposable());
@@ -175,26 +164,14 @@ export class RemoteUserDataProfileStorageService extends AbstractUserDataProfile
 
 class StorageService extends AbstractStorageService {
 
-	private profileStorage: IStorage | undefined;
+	private readonly profileStorage: IStorage;
 
-	constructor(private readonly profileStorageDatabase: Promise<IStorageDatabase>) {
+	constructor(profileStorageDatabase: IStorageDatabase) {
 		super({ flushInterval: 100 });
+		this.profileStorage = this._register(new Storage(profileStorageDatabase));
 	}
 
-	protected async doInitialize(): Promise<void> {
-		const profileStorageDatabase = await this.profileStorageDatabase;
-		const profileStorage = new Storage(profileStorageDatabase);
-		this._register(profileStorage.onDidChangeStorage(e => {
-			this.emitDidChangeValue(StorageScope.PROFILE, e);
-		}));
-		this._register(toDisposable(() => {
-			profileStorage.close();
-			profileStorage.dispose();
-			if (isDisposable(profileStorageDatabase)) {
-				profileStorageDatabase.dispose();
-			}
-		}));
-		this.profileStorage = profileStorage;
+	protected doInitialize(): Promise<void> {
 		return this.profileStorage.init();
 	}
 

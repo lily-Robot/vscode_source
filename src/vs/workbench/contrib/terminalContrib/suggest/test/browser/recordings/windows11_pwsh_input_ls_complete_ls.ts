@@ -82,6 +82,10 @@ export const events = [
 		"id": "workbench.action.terminal.acceptSelectedSuggestion"
 	},
 	{
+		"type": "sendText",
+		"data": "s"
+	},
+	{
 		"type": "output",
 		"data": "\u001b[?25l\u001b[93m\u001b[3;3Hls\u001b[97m\u001b[2m\u001b[3ms\b\u001b[?25h"
 	},

@@ -37,7 +37,7 @@ export abstract class VSCodeTestRunner {
 		return new TestOutputScanner(cp, args);
 	}
 
-	public async debug(testRun: vscode.TestRun, baseArgs: ReadonlyArray<string>, filter?: ReadonlyArray<vscode.TestItem>) {
+	public async debug(baseArgs: ReadonlyArray<string>, filter?: ReadonlyArray<vscode.TestItem>) {
 		const port = await this.findOpenPort();
 		const baseConfiguration = vscode.workspace
 			.getConfiguration('launch', this.repoLocation)
@@ -95,7 +95,7 @@ export abstract class VSCodeTestRunner {
 			},
 		});
 
-		vscode.debug.startDebugging(this.repoLocation, { ...baseConfiguration, port }, { testRun });
+		vscode.debug.startDebugging(this.repoLocation, { ...baseConfiguration, port });
 
 		let exited = false;
 		let rootSession: vscode.DebugSession | undefined;

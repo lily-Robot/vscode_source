@@ -199,8 +199,7 @@ export class MainThreadChatAgents2 extends Disposable implements MainThreadChatA
 	$updateAgent(handle: number, metadataUpdate: IExtensionChatAgentMetadata): void {
 		const data = this._agents.get(handle);
 		if (!data) {
-			this._logService.error(`MainThreadChatAgents2#$updateAgent: No agent with handle ${handle} registered`);
-			return;
+			throw new Error(`No agent with handle ${handle} registered`);
 		}
 		data.hasFollowups = metadataUpdate.hasFollowups;
 		this._chatAgentService.updateAgent(data.id, revive(metadataUpdate));

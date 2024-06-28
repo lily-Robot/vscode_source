@@ -70,11 +70,11 @@ class LogOutputChannels extends Disposable implements IWorkbenchContribution {
 		super();
 		const contextKey = CONTEXT_LOG_LEVEL.bindTo(contextKeyService);
 		contextKey.set(LogLevelToString(loggerService.getLogLevel()));
-		this._register(loggerService.onDidChangeLogLevel(e => {
+		loggerService.onDidChangeLogLevel(e => {
 			if (isLogLevel(e)) {
 				contextKey.set(LogLevelToString(loggerService.getLogLevel()));
 			}
-		}));
+		});
 
 		this.onDidAddLoggers(loggerService.getRegisteredLoggers());
 		this._register(loggerService.onDidChangeLoggers(({ added, removed }) => {

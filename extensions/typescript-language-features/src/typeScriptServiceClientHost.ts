@@ -90,8 +90,8 @@ export default class TypeScriptServiceClientHost extends Disposable {
 			services,
 			allModeIds));
 
-		this.client.onDiagnosticsReceived(({ kind, resource, diagnostics, spans }) => {
-			this.diagnosticsReceived(kind, resource, diagnostics, spans);
+		this.client.onDiagnosticsReceived(({ kind, resource, diagnostics }) => {
+			this.diagnosticsReceived(kind, resource, diagnostics);
 		}, null, this._disposables);
 
 		this.client.onConfigDiagnosticsReceived(diag => this.configFileDiagnosticsReceived(diag), null, this._disposables);
@@ -236,16 +236,14 @@ export default class TypeScriptServiceClientHost extends Disposable {
 	private async diagnosticsReceived(
 		kind: DiagnosticKind,
 		resource: vscode.Uri,
-		diagnostics: Proto.Diagnostic[],
-		spans: Proto.TextSpan[] | undefined,
+		diagnostics: Proto.Diagnostic[]
 	): Promise<void> {
 		const language = await this.findLanguage(resource);
 		if (language) {
 			language.diagnosticsReceived(
 				kind,
 				resource,
-				this.createMarkerDatas(diagnostics, language.diagnosticSource),
-				spans?.map(span => typeConverters.Range.fromTextSpan(span)));
+				this.createMarkerDatas(diagnostics, language.diagnosticSource));
 		}
 	}
 

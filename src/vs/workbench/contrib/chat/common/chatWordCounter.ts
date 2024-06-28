@@ -5,14 +5,13 @@
 
 export interface IWordCountResult {
 	value: string;
-	returnedWordCount: number;
-	totalWordCount: number;
+	actualWordCount: number;
 	isFullString: boolean;
 }
 
 export function getNWords(str: string, numWordsToCount: number): IWordCountResult {
 	// Match words and markdown style links
-	const allWordMatches = Array.from(str.matchAll(/\[([^\]]+)\]\(([^)]+)\)|\p{sc=Han}|[^\s\|\-|\p{sc=Han}]+/gu));
+	const allWordMatches = Array.from(str.matchAll(/\[([^\]]+)\]\(([^)]+)\)|[^\s\|\-]+/g));
 
 	const targetWords = allWordMatches.slice(0, numWordsToCount);
 
@@ -23,13 +22,12 @@ export function getNWords(str: string, numWordsToCount: number): IWordCountResul
 	const value = str.substring(0, endIndex);
 	return {
 		value,
-		returnedWordCount: targetWords.length === 0 ? (value.length ? 1 : 0) : targetWords.length,
-		isFullString: endIndex >= str.length,
-		totalWordCount: allWordMatches.length
+		actualWordCount: targetWords.length === 0 ? (value.length ? 1 : 0) : targetWords.length,
+		isFullString: endIndex >= str.length
 	};
 }
 
 export function countWords(str: string): number {
 	const result = getNWords(str, Number.MAX_SAFE_INTEGER);
-	return result.returnedWordCount;
+	return result.actualWordCount;
 }

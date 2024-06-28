@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
+import * as assert from 'assert';
 import { realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { timeout } from 'vs/base/common/async';
@@ -40,10 +40,6 @@ export class TestParcelWatcher extends ParcelWatcher {
 		});
 
 		return this.removeDuplicateRequests(requests, false /* validate paths skipped for tests */).map(request => request.path);
-	}
-
-	protected override getUpdateWatchersDelay(): number {
-		return 0;
 	}
 
 	protected override async doWatch(requests: IRecursiveWatchRequest[]): Promise<void> {

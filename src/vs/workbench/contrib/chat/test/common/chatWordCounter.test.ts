@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
+import * as assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from 'vs/base/test/common/utils';
 import { getNWords } from 'vs/workbench/contrib/chat/common/chatWordCounter';
 
@@ -13,7 +13,7 @@ suite('ChatWordCounter', () => {
 	function doTest(str: string, nWords: number, resultStr: string) {
 		const result = getNWords(str, nWords);
 		assert.strictEqual(result.value, resultStr);
-		assert.strictEqual(result.returnedWordCount, nWords);
+		assert.strictEqual(result.actualWordCount, nWords);
 	}
 
 	test('getNWords, matching actualWordCount', () => {

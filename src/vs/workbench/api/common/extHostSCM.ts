@@ -9,7 +9,7 @@ import { URI, UriComponents } from 'vs/base/common/uri';
 import { Event, Emitter } from 'vs/base/common/event';
 import { debounce } from 'vs/base/common/decorators';
 import { DisposableStore, IDisposable, MutableDisposable } from 'vs/base/common/lifecycle';
-import { asPromise } from 'vs/base/common/async';
+import { asPromise, Sequencer } from 'vs/base/common/async';
 import { ExtHostCommands } from 'vs/workbench/api/common/extHostCommands';
 import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext, ExtHostSCMShape, ICommandDto, MainThreadTelemetryShape, SCMGroupFeatures, SCMHistoryItemDto, SCMHistoryItemChangeDto } from './extHost.protocol';
 import { sortedDiff, equals } from 'vs/base/common/arrays';
@@ -58,24 +58,17 @@ function getIconResource(decorations?: vscode.SourceControlResourceThemableDecor
 	}
 }
 
-function getHistoryItemIconDto(icon: vscode.Uri | { light: vscode.Uri; dark: vscode.Uri } | vscode.ThemeIcon | undefined): UriComponents | { light: UriComponents; dark: UriComponents } | ThemeIcon | undefined {
-	if (!icon) {
+function getHistoryItemIconDto(historyItem: vscode.SourceControlHistoryItem): UriComponents | { light: UriComponents; dark: UriComponents } | ThemeIcon | undefined {
+	if (!historyItem.icon) {
 		return undefined;
-	} else if (URI.isUri(icon)) {
-		return icon;
-	} else if (ThemeIcon.isThemeIcon(icon)) {
-		return icon;
+	} else if (URI.isUri(historyItem.icon)) {
+		return historyItem.icon;
+	} else if (ThemeIcon.isThemeIcon(historyItem.icon)) {
+		return historyItem.icon;
 	} else {
-		const iconDto = icon as { light: URI; dark: URI };
-		return { light: iconDto.light, dark: iconDto.dark };
+		const icon = historyItem.icon as { light: URI; dark: URI };
+		return { light: icon.light, dark: icon.dark };
 	}
-}
-
-function toSCMHistoryItemDto(historyItem: vscode.SourceControlHistoryItem): SCMHistoryItemDto {
-	const icon = getHistoryItemIconDto(historyItem.icon);
-	const labels = historyItem.labels?.map(l => ({ title: l.title, icon: getHistoryItemIconDto(l.icon) }));
-
-	return { ...historyItem, icon, labels };
 }
 
 function compareResourceThemableDecorations(a: vscode.SourceControlResourceThemableDecorations, b: vscode.SourceControlResourceThemableDecorations): number {
@@ -266,7 +259,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 
 	set value(value: string) {
 		value = value ?? '';
-		this.#proxy.$setInputBoxValue(this._sourceControlHandle, value);
+		this._sequencer.queue(async () => this.#proxy.$setInputBoxValue(this._sourceControlHandle, value));
 		this.updateValue(value);
 	}
 
@@ -283,7 +276,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 	}
 
 	set placeholder(placeholder: string) {
-		this.#proxy.$setInputBoxPlaceholder(this._sourceControlHandle, placeholder);
+		this._sequencer.queue(async () => this.#proxy.$setInputBoxPlaceholder(this._sourceControlHandle, placeholder));
 		this._placeholder = placeholder;
 	}
 
@@ -303,7 +296,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 		}
 
 		this._validateInput = fn;
-		this.#proxy.$setValidationProviderIsEnabled(this._sourceControlHandle, !!fn);
+		this._sequencer.queue(async () => this.#proxy.$setValidationProviderIsEnabled(this._sourceControlHandle, !!fn));
 	}
 
 	private _enabled: boolean = true;
@@ -320,7 +313,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 		}
 
 		this._enabled = enabled;
-		this.#proxy.$setInputBoxEnablement(this._sourceControlHandle, enabled);
+		this._sequencer.queue(async () => this.#proxy.$setInputBoxEnablement(this._sourceControlHandle, enabled));
 	}
 
 	private _visible: boolean = true;
@@ -337,7 +330,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 		}
 
 		this._visible = visible;
-		this.#proxy.$setInputBoxVisibility(this._sourceControlHandle, visible);
+		this._sequencer.queue(async () => this.#proxy.$setInputBoxVisibility(this._sourceControlHandle, visible));
 	}
 
 	get document(): vscode.TextDocument {
@@ -346,7 +339,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 		return this.#extHostDocuments.getDocument(this._documentUri);
 	}
 
-	constructor(private _extension: IExtensionDescription, _extHostDocuments: ExtHostDocuments, proxy: MainThreadSCMShape, private _sourceControlHandle: number, private _documentUri: URI) {
+	constructor(private _extension: IExtensionDescription, _extHostDocuments: ExtHostDocuments, proxy: MainThreadSCMShape, private _sequencer: Sequencer, private _sourceControlHandle: number, private _documentUri: URI) {
 		this.#extHostDocuments = _extHostDocuments;
 		this.#proxy = proxy;
 	}
@@ -354,7 +347,7 @@ export class ExtHostSCMInputBox implements vscode.SourceControlInputBox {
 	showValidationMessage(message: string | vscode.MarkdownString, type: vscode.SourceControlInputBoxValidationType) {
 		checkProposedApiEnabled(this._extension, 'scmValidation');
 
-		this.#proxy.$showValidationMessage(this._sourceControlHandle, message, type as any);
+		this._sequencer.queue(async () => this.#proxy.$showValidationMessage(this._sourceControlHandle, message, type as any));
 	}
 
 	$onInputBoxValueChange(value: string): void {
@@ -393,14 +386,14 @@ class ExtHostSourceControlResourceGroup implements vscode.SourceControlResourceG
 	get label(): string { return this._label; }
 	set label(label: string) {
 		this._label = label;
-		this._proxy.$updateGroupLabel(this._sourceControlHandle, this.handle, label);
+		this._sequencer.queue(async () => this._proxy.$updateGroupLabel(this._sourceControlHandle, this.handle, label));
 	}
 
 	private _hideWhenEmpty: boolean | undefined = undefined;
 	get hideWhenEmpty(): boolean | undefined { return this._hideWhenEmpty; }
 	set hideWhenEmpty(hideWhenEmpty: boolean | undefined) {
 		this._hideWhenEmpty = hideWhenEmpty;
-		this._proxy.$updateGroup(this._sourceControlHandle, this.handle, this.features);
+		this._sequencer.queue(async () => this._proxy.$updateGroup(this._sourceControlHandle, this.handle, this.features));
 	}
 
 	get features(): SCMGroupFeatures {
@@ -420,6 +413,7 @@ class ExtHostSourceControlResourceGroup implements vscode.SourceControlResourceG
 	constructor(
 		private _proxy: MainThreadSCMShape,
 		private _commands: ExtHostCommands,
+		private _sequencer: Sequencer,
 		private _sourceControlHandle: number,
 		private _id: string,
 		private _label: string,
@@ -518,6 +512,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 
 	#proxy: MainThreadSCMShape;
 
+	private readonly _sequencer = new Sequencer();
 	private _groups: Map<GroupHandle, ExtHostSourceControlResourceGroup> = new Map<GroupHandle, ExtHostSourceControlResourceGroup>();
 
 	get id(): string {
@@ -547,7 +542,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		}
 
 		this._count = count;
-		this.#proxy.$updateSourceControl(this.handle, { count });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { count }));
 	}
 
 	private _quickDiffProvider: vscode.QuickDiffProvider | undefined = undefined;
@@ -562,7 +557,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		if (isProposedApiEnabled(this._extension, 'quickDiffProvider')) {
 			quickDiffLabel = quickDiffProvider?.label;
 		}
-		this.#proxy.$updateSourceControl(this.handle, { hasQuickDiffProvider: !!quickDiffProvider, quickDiffLabel });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { hasQuickDiffProvider: !!quickDiffProvider, quickDiffLabel }));
 	}
 
 	private _historyProvider: vscode.SourceControlHistoryProvider | undefined;
@@ -580,12 +575,12 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._historyProvider = historyProvider;
 		this._historyProviderDisposable.value = new DisposableStore();
 
-		this.#proxy.$updateSourceControl(this.handle, { hasHistoryProvider: !!historyProvider });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { hasHistoryProvider: !!historyProvider }));
 
 		if (historyProvider) {
 			this._historyProviderDisposable.value.add(historyProvider.onDidChangeCurrentHistoryItemGroup(() => {
 				this._historyProviderCurrentHistoryItemGroup = historyProvider?.currentHistoryItemGroup;
-				this.#proxy.$onDidChangeHistoryProviderCurrentHistoryItemGroup(this.handle, this._historyProviderCurrentHistoryItemGroup);
+				this._sequencer.queue(async () => this.#proxy.$onDidChangeHistoryProviderCurrentHistoryItemGroup(this.handle, this._historyProviderCurrentHistoryItemGroup));
 			}));
 		}
 	}
@@ -602,7 +597,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		}
 
 		this._commitTemplate = commitTemplate;
-		this.#proxy.$updateSourceControl(this.handle, { commitTemplate });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { commitTemplate }));
 	}
 
 	private readonly _acceptInputDisposables = new MutableDisposable<DisposableStore>();
@@ -618,7 +613,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._acceptInputCommand = acceptInputCommand;
 
 		const internal = this._commands.converter.toInternal(acceptInputCommand, this._acceptInputDisposables.value);
-		this.#proxy.$updateSourceControl(this.handle, { acceptInputCommand: internal });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { acceptInputCommand: internal }));
 	}
 
 	private readonly _actionButtonDisposables = new MutableDisposable<DisposableStore>();
@@ -642,7 +637,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 				description: actionButton.description,
 				enabled: actionButton.enabled
 			} : undefined;
-		this.#proxy.$updateSourceControl(this.handle, { actionButton: internal ?? null });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { actionButton: internal ?? null }));
 	}
 
 
@@ -654,9 +649,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 	}
 
 	set statusBarCommands(statusBarCommands: vscode.Command[] | undefined) {
-		this.logService.trace('ExtHostSourceControl#statusBarCommands', (statusBarCommands ?? []).map(c => c.command).join(', '));
 		if (this._statusBarCommands && statusBarCommands && commandListEquals(this._statusBarCommands, statusBarCommands)) {
-			this.logService.trace('ExtHostSourceControl#statusBarCommands are equal');
 			return;
 		}
 
@@ -665,7 +658,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._statusBarCommands = statusBarCommands;
 
 		const internal = (statusBarCommands || []).map(c => this._commands.converter.toInternal(c, this._statusBarDisposables.value!)) as ICommandDto[];
-		this.#proxy.$updateSourceControl(this.handle, { statusBarCommands: internal });
+		this._sequencer.queue(async () => this.#proxy.$updateSourceControl(this.handle, { statusBarCommands: internal }));
 	}
 
 	private _selected: boolean = false;
@@ -684,7 +677,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		_extHostDocuments: ExtHostDocuments,
 		proxy: MainThreadSCMShape,
 		private _commands: ExtHostCommands,
-		private readonly logService: ILogService,
 		private _id: string,
 		private _label: string,
 		private _rootUri?: vscode.Uri
@@ -697,8 +689,8 @@ class ExtHostSourceControl implements vscode.SourceControl {
 			query: _rootUri ? `rootUri=${encodeURIComponent(_rootUri.toString())}` : undefined
 		});
 
-		this._inputBox = new ExtHostSCMInputBox(_extension, _extHostDocuments, this.#proxy, this.handle, inputBoxDocumentUri);
-		this.#proxy.$registerSourceControl(this.handle, _id, _label, _rootUri, inputBoxDocumentUri);
+		this._sequencer.queue(() => this.#proxy.$registerSourceControl(this.handle, _id, _label, _rootUri, inputBoxDocumentUri));
+		this._inputBox = new ExtHostSCMInputBox(_extension, _extHostDocuments, this.#proxy, this._sequencer, this.handle, inputBoxDocumentUri);
 	}
 
 	private createdResourceGroups = new Map<ExtHostSourceControlResourceGroup, IDisposable>();
@@ -706,7 +698,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 
 	createResourceGroup(id: string, label: string, options?: { multiDiffEditorEnableViewChanges?: boolean }): ExtHostSourceControlResourceGroup {
 		const multiDiffEditorEnableViewChanges = isProposedApiEnabled(this._extension, 'scmMultiDiffEditor') && options?.multiDiffEditorEnableViewChanges === true;
-		const group = new ExtHostSourceControlResourceGroup(this.#proxy, this._commands, this.handle, id, label, multiDiffEditorEnableViewChanges, this._extension);
+		const group = new ExtHostSourceControlResourceGroup(this.#proxy, this._commands, this._sequencer, this.handle, id, label, multiDiffEditorEnableViewChanges, this._extension);
 		const disposable = Event.once(group.onDidDispose)(() => this.createdResourceGroups.delete(group));
 		this.createdResourceGroups.set(group, disposable);
 		this.eventuallyAddResourceGroups();
@@ -730,7 +722,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 				this.updatedResourceGroups.delete(group);
 				updateListener.dispose();
 				this._groups.delete(group.handle);
-				this.#proxy.$unregisterGroup(this.handle, group.handle);
+				this._sequencer.queue(async () => this.#proxy.$unregisterGroup(this.handle, group.handle));
 			});
 
 			groups.push([group.handle, group.id, group.label, group.features, group.multiDiffEditorEnableViewChanges]);
@@ -744,7 +736,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 			this._groups.set(group.handle, group);
 		}
 
-		this.#proxy.$registerGroups(this.handle, groups, splices);
+		this._sequencer.queue(async () => this.#proxy.$registerGroups(this.handle, groups, splices));
 		this.createdResourceGroups.clear();
 	}
 
@@ -763,7 +755,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		});
 
 		if (splices.length > 0) {
-			this.#proxy.$spliceResourceStates(this.handle, splices);
+			this._sequencer.queue(async () => this.#proxy.$spliceResourceStates(this.handle, splices));
 		}
 
 		this.updatedResourceGroups.clear();
@@ -784,7 +776,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._statusBarDisposables.dispose();
 
 		this._groups.forEach(group => group.dispose());
-		this.#proxy.$unregisterSourceControl(this.handle);
+		this._sequencer.queue(async () => this.#proxy.$unregisterSourceControl(this.handle));
 	}
 }
 
@@ -864,7 +856,7 @@ export class ExtHostSCM implements ExtHostSCMShape {
 		});
 
 		const handle = ExtHostSCM._handlePool++;
-		const sourceControl = new ExtHostSourceControl(extension, this._extHostDocuments, this._proxy, this._commands, this.logService, id, label, rootUri);
+		const sourceControl = new ExtHostSourceControl(extension, this._extHostDocuments, this._proxy, this._commands, id, label, rootUri);
 		this._sourceControls.set(handle, sourceControl);
 
 		const sourceControls = this._sourceControlsByExtension.get(extension.identifier) || [];
@@ -979,14 +971,7 @@ export class ExtHostSCM implements ExtHostSCMShape {
 		const historyProvider = this._sourceControls.get(sourceControlHandle)?.historyProvider;
 		const historyItems = await historyProvider?.provideHistoryItems(historyItemGroupId, options, token);
 
-		return historyItems?.map(item => toSCMHistoryItemDto(item)) ?? undefined;
-	}
-
-	async $provideHistoryItems2(sourceControlHandle: number, options: any, token: CancellationToken): Promise<SCMHistoryItemDto[] | undefined> {
-		const historyProvider = this._sourceControls.get(sourceControlHandle)?.historyProvider;
-		const historyItems = await historyProvider?.provideHistoryItems2(options, token);
-
-		return historyItems?.map(item => toSCMHistoryItemDto(item)) ?? undefined;
+		return historyItems?.map(item => ({ ...item, icon: getHistoryItemIconDto(item) })) ?? undefined;
 	}
 
 	async $provideHistoryItemSummary(sourceControlHandle: number, historyItemId: string, historyItemParentId: string | undefined, token: CancellationToken): Promise<SCMHistoryItemDto | undefined> {
@@ -996,7 +981,7 @@ export class ExtHostSCM implements ExtHostSCMShape {
 		}
 
 		const historyItem = await historyProvider.provideHistoryItemSummary(historyItemId, historyItemParentId, token);
-		return historyItem ? toSCMHistoryItemDto(historyItem) : undefined;
+		return historyItem ? { ...historyItem, icon: getHistoryItemIconDto(historyItem) } : undefined;
 	}
 
 	async $provideHistoryItemChanges(sourceControlHandle: number, historyItemId: string, historyItemParentId: string | undefined, token: CancellationToken): Promise<SCMHistoryItemChangeDto[] | undefined> {

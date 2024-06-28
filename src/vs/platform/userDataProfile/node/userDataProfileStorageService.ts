@@ -9,7 +9,7 @@ import { IUserDataProfilesService } from 'vs/platform/userDataProfile/common/use
 import { IMainProcessService } from 'vs/platform/ipc/common/mainProcessService';
 import { RemoteUserDataProfileStorageService } from 'vs/platform/userDataProfile/common/userDataProfileStorageService';
 
-export class SharedProcessUserDataProfileStorageService extends RemoteUserDataProfileStorageService {
+export class NativeUserDataProfileStorageService extends RemoteUserDataProfileStorageService {
 
 	constructor(
 		@IMainProcessService mainProcessService: IMainProcessService,
@@ -17,6 +17,6 @@ export class SharedProcessUserDataProfileStorageService extends RemoteUserDataPr
 		@IStorageService storageService: IStorageService,
 		@ILogService logService: ILogService,
 	) {
-		super(true, mainProcessService, userDataProfilesService, storageService, logService);
+		super(mainProcessService, userDataProfilesService, storageService, logService);
 	}
 }

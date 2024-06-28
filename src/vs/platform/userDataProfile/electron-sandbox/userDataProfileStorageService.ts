@@ -18,7 +18,7 @@ export class NativeUserDataProfileStorageService extends RemoteUserDataProfileSt
 		@IStorageService storageService: IStorageService,
 		@ILogService logService: ILogService,
 	) {
-		super(false, mainProcessService, userDataProfilesService, storageService, logService);
+		super(mainProcessService, userDataProfilesService, storageService, logService);
 	}
 }
 

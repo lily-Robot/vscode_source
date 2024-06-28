@@ -220,16 +220,16 @@ class GitIncomingChangesFileDecorationProvider implements FileDecorationProvider
 			const historyProvider = this.repository.historyProvider;
 			const currentHistoryItemGroup = historyProvider.currentHistoryItemGroup;
 
-			if (!currentHistoryItemGroup?.remote) {
+			if (!currentHistoryItemGroup?.base) {
 				return [];
 			}
 
-			const ancestor = await historyProvider.resolveHistoryItemGroupCommonAncestor(currentHistoryItemGroup.id, currentHistoryItemGroup.remote.id);
+			const ancestor = await historyProvider.resolveHistoryItemGroupCommonAncestor(currentHistoryItemGroup.id, currentHistoryItemGroup.base.id);
 			if (!ancestor) {
 				return [];
 			}
 
-			const changes = await this.repository.diffBetween(ancestor.id, currentHistoryItemGroup.remote.id);
+			const changes = await this.repository.diffBetween(ancestor.id, currentHistoryItemGroup.base.id);
 			return changes;
 		} catch (err) {
 			return [];

@@ -46,7 +46,7 @@ export class NotebookAccessibilityProvider extends Disposable implements IListAc
 
 	getAriaLabel(element: CellViewModel) {
 		const event = Event.filter(this.onDidAriaLabelChange, e => e === element);
-		return observableFromEvent(this, event, () => {
+		return observableFromEvent(event, () => {
 			const viewModel = this.viewModel();
 			if (!viewModel) {
 				return '';

@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as nls from 'vs/nls';
 import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
@@ -17,6 +16,7 @@ import { Delayer } from 'vs/base/common/async';
 import { Emitter, Event } from 'vs/base/common/event';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { CONTEXT_FIND_WIDGET_NOT_VISIBLE } from 'vs/editor/contrib/find/browser/findModel';
+import * as nls from 'vs/nls';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ContextKeyExpr, IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -44,7 +44,6 @@ import { GroupModelChangeKind } from 'vs/workbench/common/editor';
 import { SearchFindInput } from 'vs/workbench/contrib/search/browser/searchFindInput';
 import { getDefaultHoverDelegate } from 'vs/base/browser/ui/hover/hoverDelegateFactory';
 import { IDisposable, MutableDisposable } from 'vs/base/common/lifecycle';
-import { NotebookFindScopeType } from 'vs/workbench/contrib/notebook/common/notebookCommon';
 
 /** Specified in searchview.css */
 const SingleLineInputHeight = 26;
@@ -206,7 +205,8 @@ export class SearchWidget extends Widget {
 				notebookOptions.isInNotebookMarkdownPreview,
 				notebookOptions.isInNotebookCellInput,
 				notebookOptions.isInNotebookCellOutput,
-				{ findScopeType: NotebookFindScopeType.None }
+				false,
+				[]
 			));
 
 		this._register(
@@ -350,12 +350,6 @@ export class SearchWidget extends Widget {
 
 	focusRegexAction(): void {
 		this.searchInput?.focusOnRegex();
-	}
-
-	set replaceButtonVisibility(val: boolean) {
-		if (this.toggleReplaceButton) {
-			this.toggleReplaceButton.element.style.display = val ? '' : 'none';
-		}
 	}
 
 	private render(container: HTMLElement, options: ISearchWidgetOptions): void {
@@ -529,7 +523,7 @@ export class SearchWidget extends Widget {
 			}
 		}));
 
-		this._register(this.replaceInput.onKeyDown((keyboardEvent) => this.onReplaceInputKeyDown(keyboardEvent)));
+		this.replaceInput.onKeyDown((keyboardEvent) => this.onReplaceInputKeyDown(keyboardEvent));
 		this.replaceInput.setValue(options.replaceValue || '');
 		this._register(this.replaceInput.inputBox.onDidChange(() => this._onReplaceValueChanged.fire()));
 		this._register(this.replaceInput.inputBox.onDidHeightChange(() => this._onDidHeightChange.fire()));
@@ -670,25 +664,6 @@ export class SearchWidget extends Widget {
 
 		else if (keyboardEvent.equals(KeyCode.DownArrow)) {
 			stopPropagationForMultiLineDownwards(keyboardEvent, this.searchInput?.getValue() ?? '', this.searchInput?.domNode.querySelector('textarea') ?? null);
-		}
-
-		else if (keyboardEvent.equals(KeyCode.PageUp)) {
-			const inputElement = this.searchInput?.inputBox.inputElement;
-			if (inputElement) {
-				inputElement.setSelectionRange(0, 0);
-				inputElement.focus();
-				keyboardEvent.preventDefault();
-			}
-		}
-
-		else if (keyboardEvent.equals(KeyCode.PageDown)) {
-			const inputElement = this.searchInput?.inputBox.inputElement;
-			if (inputElement) {
-				const endOfText = inputElement.value.length;
-				inputElement.setSelectionRange(endOfText, endOfText);
-				inputElement.focus();
-				keyboardEvent.preventDefault();
-			}
 		}
 	}
 

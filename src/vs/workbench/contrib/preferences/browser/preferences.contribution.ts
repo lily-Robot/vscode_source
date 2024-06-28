@@ -1246,7 +1246,6 @@ class SettingsEditorTitleContribution extends Disposable implements IWorkbenchCo
 				ResourceContextKey.Resource.isEqualTo(this.userDataProfilesService.defaultProfile.settingsResource.toString())),
 			ContextKeyExpr.not('isInDiffEditor'));
 		const registerOpenUserSettingsEditorFromJsonAction = () => {
-			registerOpenUserSettingsEditorFromJsonActionDisposables.value = undefined;
 			registerOpenUserSettingsEditorFromJsonActionDisposables.value = registerAction2(class extends Action2 {
 				constructor() {
 					super({

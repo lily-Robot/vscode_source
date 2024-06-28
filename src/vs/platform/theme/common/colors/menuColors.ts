@@ -19,19 +19,19 @@ export const menuBorder = registerColor('menu.border',
 	nls.localize('menuBorder', "Border color of menus."));
 
 export const menuForeground = registerColor('menu.foreground',
-	selectForeground,
+	{ dark: selectForeground, light: selectForeground, hcDark: selectForeground, hcLight: selectForeground },
 	nls.localize('menuForeground', "Foreground color of menu items."));
 
 export const menuBackground = registerColor('menu.background',
-	selectBackground,
+	{ dark: selectBackground, light: selectBackground, hcDark: selectBackground, hcLight: selectBackground },
 	nls.localize('menuBackground', "Background color of menu items."));
 
 export const menuSelectionForeground = registerColor('menu.selectionForeground',
-	listActiveSelectionForeground,
+	{ dark: listActiveSelectionForeground, light: listActiveSelectionForeground, hcDark: listActiveSelectionForeground, hcLight: listActiveSelectionForeground },
 	nls.localize('menuSelectionForeground', "Foreground color of the selected menu item in menus."));
 
 export const menuSelectionBackground = registerColor('menu.selectionBackground',
-	listActiveSelectionBackground,
+	{ dark: listActiveSelectionBackground, light: listActiveSelectionBackground, hcDark: listActiveSelectionBackground, hcLight: listActiveSelectionBackground },
 	nls.localize('menuSelectionBackground', "Background color of the selected menu item in menus."));
 
 export const menuSelectionBorder = registerColor('menu.selectionBorder',

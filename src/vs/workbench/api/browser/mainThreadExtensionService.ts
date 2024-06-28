@@ -6,7 +6,7 @@
 import { Action } from 'vs/base/common/actions';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { CancellationToken } from 'vs/base/common/cancellation';
-import { SerializedError, transformErrorFromSerialization } from 'vs/base/common/errors';
+import { SerializedError } from 'vs/base/common/errors';
 import { FileAccess } from 'vs/base/common/network';
 import Severity from 'vs/base/common/severity';
 import { URI, UriComponents } from 'vs/base/common/uri';
@@ -73,13 +73,19 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 		this._internalExtensionService._onDidActivateExtension(extensionId, codeLoadingTime, activateCallTime, activateResolvedTime, activationReason);
 	}
 	$onExtensionRuntimeError(extensionId: ExtensionIdentifier, data: SerializedError): void {
-		const error = transformErrorFromSerialization(data);
+		const error = new Error();
+		error.name = data.name;
+		error.message = data.message;
+		error.stack = data.stack;
 		this._internalExtensionService._onExtensionRuntimeError(extensionId, error);
 		console.error(`[${extensionId.value}]${error.message}`);
 		console.error(error.stack);
 	}
 	async $onExtensionActivationError(extensionId: ExtensionIdentifier, data: SerializedError, missingExtensionDependency: MissingExtensionDependency | null): Promise<void> {
-		const error = transformErrorFromSerialization(data);
+		const error = new Error();
+		error.name = data.name;
+		error.message = data.message;
+		error.stack = data.stack;
 
 		this._internalExtensionService._onDidActivateExtensionError(extensionId, error);
 

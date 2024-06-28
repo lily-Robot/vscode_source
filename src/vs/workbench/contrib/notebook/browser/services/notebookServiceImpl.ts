@@ -132,6 +132,7 @@ export class NotebookProviderInfoStore extends Disposable {
 					selectors: notebookContribution.selector || [],
 					priority: this._convertPriority(notebookContribution.priority),
 					providerDisplayName: extension.description.displayName ?? extension.description.identifier.value,
+					exclusive: false
 				}));
 			}
 		}
@@ -170,7 +171,7 @@ export class NotebookProviderInfoStore extends Disposable {
 				id: notebookProviderInfo.id,
 				label: notebookProviderInfo.displayName,
 				detail: notebookProviderInfo.providerDisplayName,
-				priority: notebookProviderInfo.priority,
+				priority: notebookProviderInfo.exclusive ? RegisteredEditorPriority.exclusive : notebookProviderInfo.priority,
 			};
 			const notebookEditorOptions = {
 				canHandleDiff: () => !!this._configurationService.getValue(NotebookSetting.textDiffEditorPreview) && !this._accessibilityService.isScreenReaderOptimized(),
@@ -196,7 +197,7 @@ export class NotebookProviderInfoStore extends Disposable {
 					cellOptions = (options as INotebookEditorOptions | undefined)?.cellOptions;
 				}
 
-				const notebookOptions: INotebookEditorOptions = { ...options, cellOptions, viewState: undefined };
+				const notebookOptions = { ...options, cellOptions } as INotebookEditorOptions;
 				const editor = NotebookEditorInput.getOrCreate(this._instantiationService, notebookUri, preferredResource, notebookProviderInfo.id);
 				return { editor, options: notebookOptions };
 			};
@@ -638,7 +639,8 @@ export class NotebookService extends Disposable implements INotebookService {
 			id: viewType,
 			displayName: data.displayName,
 			providerDisplayName: data.providerDisplayName,
-			priority: data.priority || RegisteredEditorPriority.default,
+			exclusive: data.exclusive,
+			priority: RegisteredEditorPriority.default,
 			selectors: []
 		});
 
@@ -693,14 +695,6 @@ export class NotebookService extends Disposable implements INotebookService {
 			throw new Error(`NO provider registered for view type: '${selected.id}'`);
 		}
 		return result;
-	}
-
-	tryGetDataProviderSync(viewType: string): SimpleNotebookProviderInfo | undefined {
-		const selected = this.notebookProviderInfoStore.get(viewType);
-		if (!selected) {
-			return undefined;
-		}
-		return this._notebookProviders.get(selected.id);
 	}
 
 

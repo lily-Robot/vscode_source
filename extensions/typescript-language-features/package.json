@@ -1315,21 +1315,15 @@
           "markdownDescription": "%typescript.workspaceSymbols.excludeLibrarySymbols%",
           "scope": "window"
         },
-        "typescript.tsserver.enableRegionDiagnostics": {
-          "type": "boolean",
-          "default": true,
-          "description": "%typescript.tsserver.enableRegionDiagnostics%",
-          "scope": "window"
-        },
         "javascript.experimental.updateImportsOnPaste": {
-          "scope": "window",
+          "scope": "resource",
           "type": "boolean",
           "default": false,
           "description": "%configuration.updateImportsOnPaste%",
           "tags": ["experimental"]
         },
         "typescript.experimental.updateImportsOnPaste": {
-          "scope": "window",
+          "scope": "resource",
           "type": "boolean",
           "default": false,
           "description": "%configuration.updateImportsOnPaste%",

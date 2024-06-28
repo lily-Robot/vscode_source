@@ -124,7 +124,6 @@ export interface TypeScriptServiceConfiguration {
 	readonly localNodePath: string | null;
 	readonly globalNodePath: string | null;
 	readonly workspaceSymbolsExcludeLibrarySymbols: boolean;
-	readonly enableRegionDiagnostics: boolean;
 }
 
 export function areServiceConfigurationsEqual(a: TypeScriptServiceConfiguration, b: TypeScriptServiceConfiguration): boolean {
@@ -163,7 +162,6 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 			localNodePath: this.readLocalNodePath(configuration),
 			globalNodePath: this.readGlobalNodePath(configuration),
 			workspaceSymbolsExcludeLibrarySymbols: this.readWorkspaceSymbolsExcludeLibrarySymbols(configuration),
-			enableRegionDiagnostics: this.readEnableRegionDiagnostics(configuration),
 		};
 	}
 
@@ -268,9 +266,5 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 
 	private readWebTypeAcquisition(configuration: vscode.WorkspaceConfiguration): boolean {
 		return configuration.get<boolean>('typescript.tsserver.web.typeAcquisition.enabled', false);
-	}
-
-	private readEnableRegionDiagnostics(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('typescript.tsserver.enableRegionDiagnostics', true);
 	}
 }

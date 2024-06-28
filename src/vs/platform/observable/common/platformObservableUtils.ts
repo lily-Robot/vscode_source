@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IDisposable } from 'vs/base/common/lifecycle';
-import { autorunOpts, IObservable, IReader } from 'vs/base/common/observable';
-import { observableFromEventOpts } from 'vs/base/common/observableInternal/utils';
+import { autorunOpts, IObservable, IReader, observableFromEvent } from 'vs/base/common/observable';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { ContextKeyValue, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
+import { ContextKeyValue, RawContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 
 /** Creates an observable update when a configuration key updates. */
 export function observableConfigValue<T>(key: string, defaultValue: T, configurationService: IConfigurationService): IObservable<T> {
-	return observableFromEventOpts({ debugName: () => `Configuration Key "${key}"`, },
+	return observableFromEvent(
 		(handleChange) => configurationService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration(key)) {
 				handleChange(e);

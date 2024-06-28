@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ExtensionIdentifierMap, IExtensionDescription } from 'vs/platform/extensions/common/extensions';
+import { ExtensionIdentifierMap, IExtensionDescription, IRelaxedExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { localize } from 'vs/nls';
 import { ILogService } from 'vs/platform/log/common/log';
 import * as semver from 'vs/base/common/semver/semver';
-import { Mutable } from 'vs/base/common/types';
 
 // TODO: @sandy081 merge this with deduping in extensionsScannerService.ts
 export function dedupExtensions(system: IExtensionDescription[], user: IExtensionDescription[], workspace: IExtensionDescription[], development: IExtensionDescription[], logService: ILogService): IExtensionDescription[] {
@@ -28,7 +27,7 @@ export function dedupExtensions(system: IExtensionDescription[], user: IExtensio
 					return;
 				}
 				// Overwriting a builtin extension inherits the `isBuiltin` property and it doesn't show a warning
-				(<Mutable<IExtensionDescription>>userExtension).isBuiltin = true;
+				(<IRelaxedExtensionDescription>userExtension).isBuiltin = true;
 			} else {
 				logService.warn(localize('overwritingExtension', "Overwriting extension {0} with {1}.", extension.extensionLocation.fsPath, userExtension.extensionLocation.fsPath));
 			}
@@ -51,7 +50,7 @@ export function dedupExtensions(system: IExtensionDescription[], user: IExtensio
 		if (extension) {
 			if (extension.isBuiltin) {
 				// Overwriting a builtin extension inherits the `isBuiltin` property
-				(<Mutable<IExtensionDescription>>developedExtension).isBuiltin = true;
+				(<IRelaxedExtensionDescription>developedExtension).isBuiltin = true;
 			}
 		}
 		result.set(developedExtension.identifier, developedExtension);

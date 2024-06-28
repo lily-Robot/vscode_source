@@ -920,14 +920,9 @@ async fn handle_update(
 
 	info!(log, "Updating CLI to {}", latest_release);
 
-	let r = updater
+	updater
 		.do_update(&latest_release, SilentCopyProgress())
-		.await;
-
-	if let Err(e) = r {
-		did_update.store(false, Ordering::SeqCst);
-		return Err(e);
-	}
+		.await?;
 
 	Ok(UpdateResult {
 		up_to_date: true,

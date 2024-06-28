@@ -3,17 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAutoClosingPair, IAutoClosingPairConditional } from 'vs/editor/common/languages/languageConfiguration';
-
-export const javascriptAutoClosingPairsRules: IAutoClosingPairConditional[] = [
-	{ open: '{', close: '}' },
-	{ open: '[', close: ']' },
-	{ open: '(', close: ')' },
-	{ open: '\'', close: '\'', notIn: ['string', 'comment'] },
-	{ open: '"', close: '"', notIn: ['string'] },
-	{ open: '`', close: '`', notIn: ['string', 'comment'] },
-	{ open: '/**', close: ' */', notIn: ['string'] }
-];
+import { IAutoClosingPair } from 'vs/editor/common/languages/languageConfiguration';
 
 export const latexAutoClosingPairsRules: IAutoClosingPair[] = [
 	{ open: '\\left(', close: '\\right)' },

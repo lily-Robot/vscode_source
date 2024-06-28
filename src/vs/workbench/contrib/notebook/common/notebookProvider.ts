@@ -19,6 +19,7 @@ export interface NotebookEditorDescriptor {
 	readonly selectors: readonly { filenamePattern?: string; excludeFileNamePattern?: string }[];
 	readonly priority: RegisteredEditorPriority;
 	readonly providerDisplayName: string;
+	readonly exclusive: boolean;
 }
 
 export class NotebookProviderInfo {
@@ -28,6 +29,7 @@ export class NotebookProviderInfo {
 	readonly displayName: string;
 	readonly priority: RegisteredEditorPriority;
 	readonly providerDisplayName: string;
+	readonly exclusive: boolean;
 
 	private _selectors: NotebookSelector[];
 	get selectors() {
@@ -48,6 +50,7 @@ export class NotebookProviderInfo {
 		})) || [];
 		this.priority = descriptor.priority;
 		this.providerDisplayName = descriptor.providerDisplayName;
+		this.exclusive = descriptor.exclusive;
 		this._options = {
 			transientCellMetadata: {},
 			transientDocumentMetadata: {},

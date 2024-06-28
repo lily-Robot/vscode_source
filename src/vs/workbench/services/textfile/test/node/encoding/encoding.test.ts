@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
+import * as assert from 'assert';
 import * as fs from 'fs';
 import * as encoding from 'vs/workbench/services/textfile/common/encoding';
 import * as streams from 'vs/base/common/stream';
@@ -208,14 +208,6 @@ suite('Encoding', () => {
 		assert.strictEqual(mimes.encoding, 'windows1252');
 	});
 
-	test('autoGuessEncoding (candidateGuessEncodings - ShiftJIS)', async function () {
-		// This file is determined to be windows1252 unless candidateDetectEncoding is set.
-		const file = FileAccess.asFileUri('vs/workbench/services/textfile/test/node/encoding/fixtures/some.shiftjis.1.txt').fsPath;
-		const buffer = await readExactlyByFile(file, 512 * 8);
-		const mimes = await encoding.detectEncodingFromBuffer(buffer, true, ['utf8', 'shiftjis', 'eucjp']);
-		assert.strictEqual(mimes.encoding, 'shiftjis');
-	});
-
 	async function readAndDecodeFromDisk(path: string, fileEncoding: string | null) {
 		return new Promise<string>((resolve, reject) => {
 			fs.readFile(path, (err, data) => {
@@ -254,7 +246,7 @@ suite('Encoding', () => {
 			Buffer.from([65, 66, 67]),
 		]);
 
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		assert.ok(detected);
 		assert.ok(stream);
@@ -270,7 +262,7 @@ suite('Encoding', () => {
 			Buffer.from([65, 66, 67]),
 		]);
 
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 64, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 64, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		assert.ok(detected);
 		assert.ok(stream);
@@ -283,7 +275,7 @@ suite('Encoding', () => {
 		const source = newWriteableBufferStream();
 		source.end();
 
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 512, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 512, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		assert.ok(detected);
 		assert.ok(stream);
@@ -296,7 +288,7 @@ suite('Encoding', () => {
 		const path = FileAccess.asFileUri('vs/workbench/services/textfile/test/node/encoding/fixtures/some_utf16be.css').fsPath;
 		const source = streamToBufferReadableStream(fs.createReadStream(path));
 
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 64, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 64, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		assert.strictEqual(detected.encoding, 'utf16be');
 		assert.strictEqual(detected.seemsBinary, false);
@@ -309,7 +301,7 @@ suite('Encoding', () => {
 	test('toDecodeStream - empty file', async function () {
 		const path = FileAccess.asFileUri('vs/workbench/services/textfile/test/node/encoding/fixtures/empty.txt').fsPath;
 		const source = streamToBufferReadableStream(fs.createReadStream(path));
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		const expected = await readAndDecodeFromDisk(path, detected.encoding);
 		const actual = await readAllAsString(stream);
@@ -326,7 +318,7 @@ suite('Encoding', () => {
 		}
 
 		const source = newTestReadableStream(buffers);
-		const { stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		const expected = new TextDecoder().decode(incompleteEmojis);
 		const actual = await readAllAsString(stream);
@@ -338,7 +330,7 @@ suite('Encoding', () => {
 		const path = FileAccess.asFileUri('vs/workbench/services/textfile/test/node/encoding/fixtures/some_gbk.txt').fsPath;
 		const source = streamToBufferReadableStream(fs.createReadStream(path));
 
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async () => 'gbk' });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, overwriteEncoding: async () => 'gbk' });
 		assert.ok(detected);
 		assert.ok(stream);
 
@@ -350,7 +342,7 @@ suite('Encoding', () => {
 		const path = FileAccess.asFileUri('vs/workbench/services/textfile/test/node/encoding/fixtures/issue_102202.txt').fsPath;
 		const source = streamToBufferReadableStream(fs.createReadStream(path));
 
-		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async () => 'utf-8' });
+		const { detected, stream } = await encoding.toDecodeStream(source, { acceptTextOnly: true, minBytesRequiredForDetection: 4, guessEncoding: false, overwriteEncoding: async () => 'utf-8' });
 		assert.ok(detected);
 		assert.ok(stream);
 
@@ -373,7 +365,7 @@ suite('Encoding', () => {
 
 		let error: Error | undefined = undefined;
 		try {
-			await encoding.toDecodeStream(source(), { acceptTextOnly: true, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+			await encoding.toDecodeStream(source(), { acceptTextOnly: true, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 		} catch (e) {
 			error = e;
 		}
@@ -383,7 +375,7 @@ suite('Encoding', () => {
 
 		// acceptTextOnly: false
 
-		const { detected, stream } = await encoding.toDecodeStream(source(), { acceptTextOnly: false, guessEncoding: false, candidateGuessEncodings: [], overwriteEncoding: async detected => detected || encoding.UTF8 });
+		const { detected, stream } = await encoding.toDecodeStream(source(), { acceptTextOnly: false, guessEncoding: false, overwriteEncoding: async detected => detected || encoding.UTF8 });
 
 		assert.ok(detected);
 		assert.strictEqual(detected.seemsBinary, true);

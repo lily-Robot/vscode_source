@@ -12,7 +12,7 @@ import { EditorOption } from 'vs/editor/common/config/editorOptions';
 import { Range } from 'vs/editor/common/core/range';
 import { ILanguageService } from 'vs/editor/common/languages/language';
 import { IModelDecoration } from 'vs/editor/common/model';
-import { HoverAnchor, HoverAnchorType, HoverForeignElementAnchor, IEditorHoverParticipant, IEditorHoverRenderContext, IHoverPart, IRenderedHoverPart, IRenderedHoverParts, RenderedHoverParts } from 'vs/editor/contrib/hover/browser/hoverTypes';
+import { HoverAnchor, HoverAnchorType, HoverForeignElementAnchor, IEditorHoverParticipant, IEditorHoverRenderContext, IHoverPart } from 'vs/editor/contrib/hover/browser/hoverTypes';
 import { InlineCompletionsController } from 'vs/editor/contrib/inlineCompletions/browser/inlineCompletionsController';
 import { InlineSuggestionHintsContentWidget } from 'vs/editor/contrib/inlineCompletions/browser/inlineCompletionsHintsWidget';
 import { MarkdownRenderer } from 'vs/editor/browser/widget/markdownRenderer/browser/markdownRenderer';
@@ -94,8 +94,8 @@ export class InlineCompletionsHoverParticipant implements IEditorHoverParticipan
 		return [];
 	}
 
-	renderHoverParts(context: IEditorHoverRenderContext, hoverParts: InlineCompletionsHover[]): IRenderedHoverParts<InlineCompletionsHover> {
-		const disposables = new DisposableStore();
+	renderHoverParts(context: IEditorHoverRenderContext, hoverParts: InlineCompletionsHover[]): IDisposable {
+		const disposableStore = new DisposableStore();
 		const part = hoverParts[0];
 
 		this._telemetryService.publicLog2<{}, {
@@ -104,7 +104,7 @@ export class InlineCompletionsHoverParticipant implements IEditorHoverParticipan
 		}>('inlineCompletionHover.shown');
 
 		if (this.accessibilityService.isScreenReaderOptimized() && !this._editor.getOption(EditorOption.screenReaderAnnounceInlineSuggestion)) {
-			disposables.add(this.renderScreenReaderText(context, part));
+			this.renderScreenReaderText(context, part, disposableStore);
 		}
 
 		const model = part.controller.model.get()!;
@@ -115,42 +115,32 @@ export class InlineCompletionsHoverParticipant implements IEditorHoverParticipan
 			model.inlineCompletionsCount,
 			model.activeCommands,
 		);
-		const widgetNode: HTMLElement = w.getDomNode();
-		context.fragment.appendChild(widgetNode);
+		context.fragment.appendChild(w.getDomNode());
 
 		model.triggerExplicitly();
 
-		disposables.add(w);
-		const renderedHoverPart: IRenderedHoverPart<InlineCompletionsHover> = {
-			hoverPart: part,
-			hoverElement: widgetNode,
-			dispose() { disposables.dispose(); }
-		};
-		return new RenderedHoverParts([renderedHoverPart]);
+		disposableStore.add(w);
+
+		return disposableStore;
 	}
 
-	getAccessibleContent(hoverPart: InlineCompletionsHover): string {
-		return nls.localize('hoverAccessibilityStatusBar', 'There are inline completions here');
-	}
-
-	private renderScreenReaderText(context: IEditorHoverRenderContext, part: InlineCompletionsHover): IDisposable {
-		const disposables = new DisposableStore();
+	private renderScreenReaderText(context: IEditorHoverRenderContext, part: InlineCompletionsHover, disposableStore: DisposableStore) {
 		const $ = dom.$;
 		const markdownHoverElement = $('div.hover-row.markdown-hover');
 		const hoverContentsElement = dom.append(markdownHoverElement, $('div.hover-contents', { ['aria-live']: 'assertive' }));
-		const renderer = disposables.add(new MarkdownRenderer({ editor: this._editor }, this._languageService, this._openerService));
+		const renderer = disposableStore.add(new MarkdownRenderer({ editor: this._editor }, this._languageService, this._openerService));
 		const render = (code: string) => {
-			disposables.add(renderer.onDidRenderAsync(() => {
+			disposableStore.add(renderer.onDidRenderAsync(() => {
 				hoverContentsElement.className = 'hover-contents code-hover-contents';
 				context.onContentsChanged();
 			}));
 
 			const inlineSuggestionAvailable = nls.localize('inlineSuggestionFollows', "Suggestion:");
-			const renderedContents = disposables.add(renderer.render(new MarkdownString().appendText(inlineSuggestionAvailable).appendCodeblock('text', code)));
+			const renderedContents = disposableStore.add(renderer.render(new MarkdownString().appendText(inlineSuggestionAvailable).appendCodeblock('text', code)));
 			hoverContentsElement.replaceChildren(renderedContents.element);
 		};
 
-		disposables.add(autorun(reader => {
+		disposableStore.add(autorun(reader => {
 			/** @description update hover */
 			const ghostText = part.controller.model.read(reader)?.primaryGhostText.read(reader);
 			if (ghostText) {
@@ -162,6 +152,5 @@ export class InlineCompletionsHoverParticipant implements IEditorHoverParticipan
 		}));
 
 		context.fragment.appendChild(markdownHoverElement);
-		return disposables;
 	}
 }

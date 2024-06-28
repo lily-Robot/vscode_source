@@ -4,26 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from 'vs/base/common/lifecycle';
-import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from 'vs/workbench/common/contributions';
-import { ChatAgentLocation, IChatAgentService } from 'vs/workbench/contrib/chat/common/chatAgents';
 import { IChatVariablesService } from 'vs/workbench/contrib/chat/common/chatVariables';
 import 'vs/workbench/contrib/notebook/browser/controller/chat/cellChatActions';
-import { CTX_NOTEBOOK_CHAT_HAS_AGENT } from 'vs/workbench/contrib/notebook/browser/controller/chat/notebookChatContext';
 import { NotebookChatController } from 'vs/workbench/contrib/notebook/browser/controller/chat/notebookChatController';
 import { INotebookEditorService } from 'vs/workbench/contrib/notebook/browser/services/notebookEditorService';
 
-class NotebookChatContribution extends Disposable implements IWorkbenchContribution {
+class NotebookChatVariables extends Disposable implements IWorkbenchContribution {
 
-	static readonly ID = 'workbench.contrib.notebookChatContribution';
-
-	private readonly _ctxHasProvider: IContextKey<boolean>;
+	static readonly ID = 'workbench.contrib.notebookChatVariables';
 
 	constructor(
 		@IChatVariablesService private readonly _chatVariableService: IChatVariablesService,
-		@INotebookEditorService private readonly _notebookEditorService: INotebookEditorService,
-		@IContextKeyService contextKeyService: IContextKeyService,
-		@IChatAgentService chatAgentService: IChatAgentService
+		@INotebookEditorService private readonly _notebookEditorService: INotebookEditorService
 	) {
 		super();
 
@@ -41,17 +34,7 @@ class NotebookChatContribution extends Disposable implements IWorkbenchContribut
 				return undefined;
 			}
 		));
-
-		this._ctxHasProvider = CTX_NOTEBOOK_CHAT_HAS_AGENT.bindTo(contextKeyService);
-
-		const updateNotebookAgentStatus = () => {
-			const hasNotebookAgent = Boolean(chatAgentService.getDefaultAgent(ChatAgentLocation.Notebook));
-			this._ctxHasProvider.set(hasNotebookAgent);
-		};
-
-		updateNotebookAgentStatus();
-		this._register(chatAgentService.onDidChangeAgents(updateNotebookAgentStatus));
 	}
 }
 
-registerWorkbenchContribution2(NotebookChatContribution.ID, NotebookChatContribution, WorkbenchPhase.BlockRestore);
+registerWorkbenchContribution2(NotebookChatVariables.ID, NotebookChatVariables, WorkbenchPhase.BlockRestore);

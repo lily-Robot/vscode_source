@@ -24,7 +24,7 @@ import { MissingExtensionDependency, ActivationKind, checkProposedApiEnabled, is
 import { ExtensionDescriptionRegistry, IActivationEventsReader } from 'vs/workbench/services/extensions/common/extensionDescriptionRegistry';
 import * as errors from 'vs/base/common/errors';
 import type * as vscode from 'vscode';
-import { ExtensionIdentifier, ExtensionIdentifierMap, ExtensionIdentifierSet, IExtensionDescription } from 'vs/platform/extensions/common/extensions';
+import { ExtensionIdentifier, ExtensionIdentifierMap, ExtensionIdentifierSet, IExtensionDescription, IRelaxedExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { ExtensionGlobalMemento, ExtensionMemento } from 'vs/workbench/api/common/extHostMemento';
 import { RemoteAuthorityResolverError, ExtensionKind, ExtensionMode, ExtensionRuntime, ManagedResolvedAuthority as ExtHostManagedResolvedAuthority } from 'vs/workbench/api/common/extHostTypes';
@@ -498,10 +498,9 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
 	private _loadExtensionContext(extensionDescription: IExtensionDescription): Promise<vscode.ExtensionContext> {
 
 		const lanuageModelAccessInformation = this._extHostLanguageModels.createLanguageModelAccessInformation(extensionDescription);
-		// TODO: These should probably be disposed when the extension deactivates
-		const globalState = this._register(new ExtensionGlobalMemento(extensionDescription, this._storage));
-		const workspaceState = this._register(new ExtensionMemento(extensionDescription.identifier.value, false, this._storage));
-		const secrets = this._register(new ExtensionSecrets(extensionDescription, this._secretState));
+		const globalState = new ExtensionGlobalMemento(extensionDescription, this._storage);
+		const workspaceState = new ExtensionMemento(extensionDescription.identifier.value, false, this._storage);
+		const secrets = new ExtensionSecrets(extensionDescription, this._secretState);
 		const extensionMode = extensionDescription.isUnderDevelopment
 			? (this._initData.environment.extensionTestsLocationURI ? ExtensionMode.Test : ExtensionMode.Development)
 			: ExtensionMode.Production;
@@ -616,7 +615,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
 		});
 	}
 
-	private _activateAllStartupFinishedDeferred(extensions: IExtensionDescription[], start: number = 0): void {
+	private _activateAllStartupFinishedDeferred(extensions: Readonly<IRelaxedExtensionDescription>[], start: number = 0): void {
 		const timeBudget = 50; // 50 milliseconds
 		const startTime = Date.now();
 
@@ -1231,7 +1230,7 @@ class SyncedActivationEventsReader implements IActivationEventsReader {
 		this.addActivationEvents(activationEvents);
 	}
 
-	public readActivationEvents(extensionDescription: IExtensionDescription): string[] {
+	public readActivationEvents(extensionDescription: Readonly<IRelaxedExtensionDescription>): string[] {
 		return this._map.get(extensionDescription.identifier) ?? [];
 	}
 

@@ -1562,25 +1562,24 @@ namespace SetTunnelProtocolAction {
 	export const LABEL_HTTP = nls.localize('remote.tunnel.protocolHttp', "HTTP");
 	export const LABEL_HTTPS = nls.localize('remote.tunnel.protocolHttps', "HTTPS");
 
-	async function handler(arg: any, protocol: TunnelProtocol, remoteExplorerService: IRemoteExplorerService, environmentService: IWorkbenchEnvironmentService) {
+	async function handler(arg: any, protocol: TunnelProtocol, remoteExplorerService: IRemoteExplorerService) {
 		if (isITunnelItem(arg)) {
 			const attributes: Partial<Attributes> = {
 				protocol
 			};
-			const target = environmentService.remoteAuthority ? ConfigurationTarget.USER_REMOTE : ConfigurationTarget.USER_LOCAL;
-			return remoteExplorerService.tunnelModel.configPortsAttributes.addAttributes(arg.remotePort, attributes, target);
+			return remoteExplorerService.tunnelModel.configPortsAttributes.addAttributes(arg.remotePort, attributes, ConfigurationTarget.USER_REMOTE);
 		}
 	}
 
 	export function handlerHttp(): ICommandHandler {
 		return async (accessor, arg) => {
-			return handler(arg, TunnelProtocol.Http, accessor.get(IRemoteExplorerService), accessor.get(IWorkbenchEnvironmentService));
+			return handler(arg, TunnelProtocol.Http, accessor.get(IRemoteExplorerService));
 		};
 	}
 
 	export function handlerHttps(): ICommandHandler {
 		return async (accessor, arg) => {
-			return handler(arg, TunnelProtocol.Https, accessor.get(IRemoteExplorerService), accessor.get(IWorkbenchEnvironmentService));
+			return handler(arg, TunnelProtocol.Https, accessor.get(IRemoteExplorerService));
 		};
 	}
 }
@@ -1818,5 +1817,10 @@ MenuRegistry.appendMenuItem(MenuId.TunnelLocalAddressInline, ({
 	when: isForwardedOrDetectedExpr
 }));
 
-registerColor('ports.iconRunningProcessForeground', STATUS_BAR_REMOTE_ITEM_BACKGROUND, nls.localize('portWithRunningProcess.foreground', "The color of the icon for a port that has an associated running process."));
+registerColor('ports.iconRunningProcessForeground', {
+	light: STATUS_BAR_REMOTE_ITEM_BACKGROUND,
+	dark: STATUS_BAR_REMOTE_ITEM_BACKGROUND,
+	hcDark: STATUS_BAR_REMOTE_ITEM_BACKGROUND,
+	hcLight: STATUS_BAR_REMOTE_ITEM_BACKGROUND
+}, nls.localize('portWithRunningProcess.foreground', "The color of the icon for a port that has an associated running process."));
 

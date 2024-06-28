@@ -90,15 +90,11 @@ export class ChatVariablesService implements IChatVariablesService {
 
 		await Promise.allSettled(jobs);
 
-		// Make array not sparse
 		resolvedVariables = coalesce<IChatRequestVariableEntry>(resolvedVariables);
 
 		// "reverse", high index first so that replacement is simple
 		resolvedVariables.sort((a, b) => b.range!.start - a.range!.start);
-
-		// resolvedAttachedContext is a sparse array
-		resolvedVariables.push(...coalesce(resolvedAttachedContext));
-
+		resolvedVariables.push(...resolvedAttachedContext);
 
 		return {
 			variables: resolvedVariables,

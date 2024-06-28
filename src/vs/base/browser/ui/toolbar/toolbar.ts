@@ -38,16 +38,6 @@ export interface IToolBarOptions {
 	 * If true, toggled primary items are highlighted with a background color.
 	 */
 	highlightToggledItems?: boolean;
-
-	/**
-	 * Render action with icons (default: `true`)
-	 */
-	icon?: boolean;
-
-	/**
-	 * Render action with label (default: `false`)
-	 */
-	label?: boolean;
 }
 
 /**
@@ -60,6 +50,7 @@ export class ToolBar extends Disposable {
 	private toggleMenuActionViewItem: DropdownMenuActionViewItem | undefined;
 	private submenuActionViewItems: DropdownMenuActionViewItem[] = [];
 	private hasSecondaryActions: boolean = false;
+	private readonly lookupKeybindings: boolean;
 	private readonly element: HTMLElement;
 
 	private _onDidChangeDropdownVisibility = this._register(new EventMultiplexer<boolean>());
@@ -71,6 +62,7 @@ export class ToolBar extends Disposable {
 
 		options.hoverDelegate = options.hoverDelegate ?? this._register(createInstantHoverDelegate());
 		this.options = options;
+		this.lookupKeybindings = typeof this.options.getKeyBinding === 'function';
 
 		this.toggleMenuAction = this._register(new ToggleMenuAction(() => this.toggleMenuActionViewItem?.show(), options.toggleMenuTitle));
 
@@ -206,7 +198,7 @@ export class ToolBar extends Disposable {
 		}
 
 		primaryActionsToSet.forEach(action => {
-			this.actionBar.push(action, { icon: this.options.icon ?? true, label: this.options.label ?? false, keybinding: this.getKeybindingLabel(action) });
+			this.actionBar.push(action, { icon: true, label: false, keybinding: this.getKeybindingLabel(action) });
 		});
 	}
 
@@ -215,7 +207,7 @@ export class ToolBar extends Disposable {
 	}
 
 	private getKeybindingLabel(action: IAction): string | undefined {
-		const key = this.options.getKeyBinding?.(action);
+		const key = this.lookupKeybindings ? this.options.getKeyBinding?.(action) : undefined;
 
 		return key?.getLabel() ?? undefined;
 	}

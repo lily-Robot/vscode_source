@@ -19,7 +19,7 @@ export class AccessibilitySignalLineDebuggerContribution
 	) {
 		super();
 
-		const isEnabled = observableFromEvent(this,
+		const isEnabled = observableFromEvent(
 			accessibilitySignalService.onSoundEnabledChanged(AccessibilitySignal.onDebugBreak),
 			() => accessibilitySignalService.isSoundEnabled(AccessibilitySignal.onDebugBreak)
 		);
