@@ -170,5 +170,6 @@
 	},
 	"css.format.spaceAroundSelectorSeparator": true,
 	"inlineChat.mode": "live",
-	"typescript.enablePromptUseWorkspaceTsdk": true
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+	"window.closeWhenEmpty": false
 }
